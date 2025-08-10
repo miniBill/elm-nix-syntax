@@ -2,7 +2,15 @@ module Nix.Parser exposing (errorToString, parse)
 
 import Ansi.Color
 import List.Extra
-import Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), Name(..), Pattern(..), StringElement(..))
+import Nix.Syntax.Expression
+    exposing
+        ( AttrPath
+        , Attribute
+        , Expression(..)
+        , Name(..)
+        , Pattern(..)
+        , StringElement(..)
+        )
 import Nix.Syntax.Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
 import Parser.Advanced as Parser exposing ((|.), (|=), Token(..))
@@ -382,11 +390,57 @@ deadEndToString lines ( head, tail ) =
                 (sourceFragment
                     :: List.map
                         (\( contextStack, problems ) ->
+                            let
+                                expected =
+                                    problems
+                                        |> List.filterMap
+                                            (\problem ->
+                                                case problem of
+                                                    Expecting x ->
+                                                        Just x
+
+                                                    _ ->
+                                                        Nothing
+                                            )
+
+                                other =
+                                    problems
+                                        |> List.filterMap
+                                            (\problem ->
+                                                case problem of
+                                                    Expecting _ ->
+                                                        Nothing
+
+                                                    _ ->
+                                                        Just (problemToString problem)
+                                            )
+
+                                groupedExpected : List String
+                                groupedExpected =
+                                    case expected of
+                                        [] ->
+                                            []
+
+                                        [ x ] ->
+                                            [ "expecting '" ++ x ++ "'" ]
+
+                                        _ ->
+                                            [ "expecting one of '"
+                                                ++ String.join "' '" expected
+                                                ++ "'"
+                                            ]
+
+                                problemsString =
+                                    (groupedExpected ++ other)
+                                        |> List.sort
+                                        |> String.join "\n  "
+                            in
                             "- "
-                                ++ Ansi.Color.fontColor Ansi.Color.cyan (contextStackToString contextStack)
+                                ++ Ansi.Color.fontColor
+                                    Ansi.Color.cyan
+                                    (contextStackToString contextStack)
                                 ++ ":\n  "
-                                ++ String.join "\n  "
-                                    (List.map problemToString problems)
+                                ++ problemsString
                         )
                         multiple
                 )
