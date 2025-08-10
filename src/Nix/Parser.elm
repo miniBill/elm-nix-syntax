@@ -373,6 +373,7 @@ deadEndToString lines ( head, tail ) =
         sourceFragment : String
         sourceFragment =
             let
+                num : String
                 num =
                     String.fromInt head.row
             in
@@ -383,67 +384,69 @@ deadEndToString lines ( head, tail ) =
                 ++ "\n"
                 ++ String.repeat (String.length num + head.col) " "
                 ++ Ansi.Color.fontColor Ansi.Color.red "^"
+
+        groupToString :
+            ( List { row : Int, col : Int, context : Context }
+            , List Problem
+            )
+            -> String
+        groupToString ( contextStack, problems ) =
+            let
+                expected : List String
+                expected =
+                    problems
+                        |> List.filterMap
+                            (\problem ->
+                                case problem of
+                                    Expecting x ->
+                                        Just x
+
+                                    _ ->
+                                        Nothing
+                            )
+
+                other : List String
+                other =
+                    problems
+                        |> List.filterMap
+                            (\problem ->
+                                case problem of
+                                    Expecting _ ->
+                                        Nothing
+
+                                    _ ->
+                                        Just (problemToString problem)
+                            )
+
+                groupedExpected : List String
+                groupedExpected =
+                    case expected of
+                        [] ->
+                            []
+
+                        [ x ] ->
+                            [ "expecting '" ++ x ++ "'" ]
+
+                        _ ->
+                            [ "expecting one of '"
+                                ++ String.join "' '" expected
+                                ++ "'"
+                            ]
+
+                problemsString =
+                    (groupedExpected ++ other)
+                        |> List.sort
+                        |> String.join "\n  "
+            in
+            "- "
+                ++ Ansi.Color.fontColor
+                    Ansi.Color.cyan
+                    (contextStackToString contextStack)
+                ++ ":\n  "
+                ++ problemsString
     in
-    case grouped of
-        multiple ->
-            String.join "\n"
-                (sourceFragment
-                    :: List.map
-                        (\( contextStack, problems ) ->
-                            let
-                                expected =
-                                    problems
-                                        |> List.filterMap
-                                            (\problem ->
-                                                case problem of
-                                                    Expecting x ->
-                                                        Just x
-
-                                                    _ ->
-                                                        Nothing
-                                            )
-
-                                other =
-                                    problems
-                                        |> List.filterMap
-                                            (\problem ->
-                                                case problem of
-                                                    Expecting _ ->
-                                                        Nothing
-
-                                                    _ ->
-                                                        Just (problemToString problem)
-                                            )
-
-                                groupedExpected : List String
-                                groupedExpected =
-                                    case expected of
-                                        [] ->
-                                            []
-
-                                        [ x ] ->
-                                            [ "expecting '" ++ x ++ "'" ]
-
-                                        _ ->
-                                            [ "expecting one of '"
-                                                ++ String.join "' '" expected
-                                                ++ "'"
-                                            ]
-
-                                problemsString =
-                                    (groupedExpected ++ other)
-                                        |> List.sort
-                                        |> String.join "\n  "
-                            in
-                            "- "
-                                ++ Ansi.Color.fontColor
-                                    Ansi.Color.cyan
-                                    (contextStackToString contextStack)
-                                ++ ":\n  "
-                                ++ problemsString
-                        )
-                        multiple
-                )
+    (sourceFragment :: List.map groupToString grouped)
+        |> String.join "\n"
 
 
 contextStackToString : List { row : Int, col : Int, context : Context } -> String
