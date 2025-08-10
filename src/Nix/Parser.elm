@@ -2,11 +2,12 @@ module Nix.Parser exposing (errorToString, parse)
 
 import Ansi.Color
 import List.Extra
-import Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), Name(..), StringElement(..))
+import Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), Name(..), Pattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
 import Parser.Advanced as Parser exposing ((|.), (|=), Token(..))
 import Parser.Advanced.Workaround
+import Set exposing (Set)
 
 
 type Context
@@ -14,13 +15,15 @@ type Context
     | ParsingString
     | ParsingList
     | ParsingAttrset
+    | ParsingFunction
 
 
 type Problem
     = ExpectingEnd
-    | Problem String
     | Expecting String
+    | ExpectingVariable
     | UnexpectedChar
+    | Unimplemented String
 
 
 type alias Parser a =
@@ -50,24 +53,61 @@ expression =
                 [ Parser.map StringExpr string
                 , Parser.map RecordExpr attributeSet
                 , Parser.map ListExpr list
+                , function
                 ]
             )
             |. spaces
 
 
+function : Parser Expression
+function =
+    Parser.succeed FunctionExpr
+        |= Parser.backtrackable pattern
+        |. Parser.backtrackable spaces
+        |. Parser.symbol (token ":")
+        |= Parser.inContext ParsingFunction
+            (Parser.succeed identity
+                |. spaces
+                |= Parser.lazy (\_ -> expression)
+            )
+
+
+pattern : Parser (Node Pattern)
+pattern =
+    nodify
+        (Parser.oneOf
+            [ Parser.succeed VarPattern
+                |= identifier
+            , Parser.succeed AllPattern
+                |. Parser.symbol (token "_")
+            , Parser.succeed identity
+                |. Parser.symbol (token "{")
+                |= Parser.oneOf
+                    [ Parser.problem (Unimplemented "set pattern")
+
+                    -- Rember defaults in params
+                    , Parser.problem (Unimplemented "open set pattern")
+                    ]
+            , Parser.problem (Unimplemented "@-pattern")
+            ]
+        )
+
+
 string : Parser (List StringElement)
 string =
-    Parser.inContext ParsingString <|
-        Parser.oneOf
-            [ Parser.succeed identity
-                |. Parser.symbol (token "\"")
-                |= many stringElement
-                |. Parser.symbol (token "\"")
-            , Parser.succeed identity
-                |= Parser.problem (Problem "indented string")
-            , Parser.succeed identity
-                |= Parser.problem (Problem "uri")
-            ]
+    Parser.oneOf
+        [ Parser.succeed identity
+            |. Parser.symbol (token "\"")
+            |= Parser.inContext ParsingString
+                (Parser.succeed identity
+                    |= many stringElement
+                    |. Parser.symbol (token "\"")
+                )
+        , Parser.succeed identity
+            |= Parser.problem (Unimplemented "indented string")
+        , Parser.succeed identity
+            |= Parser.problem (Unimplemented "uri")
+        ]
 
 
 token : String -> Token Problem
@@ -167,15 +207,18 @@ many item =
 
 attributeSet : Parser (List (Node Attribute))
 attributeSet =
-    Parser.inContext ParsingAttrset <|
-        Parser.sequence
-            { start = token "{"
-            , spaces = spaces
-            , end = token "}"
-            , trailing = Parser.Optional
-            , separator = token ""
-            , item = attribute
-            }
+    Parser.succeed identity
+        |. Parser.symbol (token "{")
+        |= Parser.inContext ParsingAttrset
+            (Parser.sequence
+                { start = token ""
+                , spaces = spaces
+                , end = token "}"
+                , trailing = Parser.Optional
+                , separator = token ""
+                , item = attribute
+                }
+            )
 
 
 attribute : Parser (Node Attribute)
@@ -221,26 +264,44 @@ name =
 identifier : Parser String
 identifier =
     let
-        validFirst : Char -> Bool
-        validFirst c =
+        start : Char -> Bool
+        start c =
             c == '_' || Char.isAlpha c
 
-        validRest : Char -> Bool
-        validRest c =
+        inner : Char -> Bool
+        inner c =
             c == '_' || c == '\'' || c == '-' || Char.isAlphaNum c
     in
-    Parser.getChompedString
-        (Parser.chompIf validFirst
-            (Expecting "identifier's first character")
-            |. Parser.chompWhile validRest
-        )
+    Parser.variable
+        { start = start
+        , inner = inner
+        , reserved = reserved
+        , expecting = ExpectingVariable
+        }
+
+
+reserved : Set String
+reserved =
+    Set.fromList
+        [ "let"
+        , "in"
+        ]
 
 
 list : Parser (List (Node Expression))
 list =
-    Parser.inContext ParsingList <|
-        Parser.succeed identity
-            |= Parser.problem (Problem "listParser")
+    Parser.succeed identity
+        |. Parser.symbol (token "[")
+        |= Parser.inContext ParsingList
+            (Parser.sequence
+                { start = token ""
+                , separator = token ""
+                , end = token "]"
+                , spaces = spaces
+                , trailing = Parser.Optional
+                , item = Parser.lazy (\_ -> expression)
+                }
+            )
 
 
 spaces : Parser ()
@@ -335,7 +396,15 @@ contextStackToString : List { row : Int, col : Int, context : Context } -> Strin
 contextStackToString frames =
     frames
         |> List.reverse
-        |> List.map (\{ row, col, context } -> contextToString context)
+        |> List.map
+            (\{ row, col, context } ->
+                contextToString context
+                    ++ " ("
+                    ++ String.fromInt row
+                    ++ ":"
+                    ++ String.fromInt col
+                    ++ ")"
+            )
         |> String.join " > "
 
 
@@ -354,6 +423,9 @@ contextToString context =
         ParsingAttrset ->
             "attrset"
 
+        ParsingFunction ->
+            "function"
+
 
 problemToString : Problem -> String
 problemToString p =
@@ -361,31 +433,14 @@ problemToString p =
         Expecting s ->
             "expecting '" ++ s ++ "'"
 
-        -- ExpectingInt ->
-        --     "expecting int"
-        -- ExpectingHex ->
-        --     "expecting hex"
-        -- ExpectingOctal ->
-        --     "expecting octal"
-        -- ExpectingBinary ->
-        --     "expecting binary"
-        -- ExpectingFloat ->
-        --     "expecting float"
-        -- ExpectingNumber ->
-        --     "expecting number"
-        -- ExpectingVariable ->
-        --     "expecting variable"
-        -- ExpectingSymbol s ->
-        --     "expecting symbol '" ++ s ++ "'"
-        -- ExpectingKeyword s ->
-        --     "expecting keyword '" ++ s ++ "'"
+        ExpectingVariable ->
+            "expecting variable name"
+
         ExpectingEnd ->
             "expecting end"
 
         UnexpectedChar ->
             "unexpected char"
 
-        -- BadRepeat ->
-        --     "bad repeat"
-        Problem s ->
-            "problem: " ++ s
+        Unimplemented s ->
+            "unimplemented: " ++ s

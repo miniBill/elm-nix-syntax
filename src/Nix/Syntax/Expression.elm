@@ -22,7 +22,7 @@ type
       -- | ParenthesizedExpression (Node Expression)
       -- | LetExpression LetBlock
       -- | CaseExpression CaseBlock
-      -- | LambdaExpression Lambda
+    | FunctionExpr (Node Pattern) (Node Expression)
     | RecordExpr (List (Node Attribute))
     | ListExpr (List (Node Expression))
 
@@ -49,3 +49,20 @@ type StringElement
 type Name
     = StringName (List StringElement)
     | IdentifierName String
+
+
+type Pattern
+    = AllPattern
+      -- | UnitPattern
+      -- | CharPattern Char
+      -- | StringPattern String
+      -- | IntPattern Int
+      -- | HexPattern Int
+      -- | FloatPattern Float
+      -- | RecordPattern (List (Node String))
+      -- | OpenRecordPattern (List (Node String))
+      -- | UnConsPattern (Node Pattern) (Node Pattern)
+      -- | ListPattern (List (Node Pattern))
+    | VarPattern String
+      -- | AsPattern (Node Pattern) (Node String)
+    | ParenthesizedPattern (Node Pattern)
