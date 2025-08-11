@@ -3,7 +3,7 @@ module Flake exposing (suite)
 import Nix.Syntax.Expression exposing (Expression(..), Name(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Test exposing (Test)
-import Utils exposing (node)
+import Utils exposing (key, node, record, string)
 
 
 input : String
@@ -222,32 +222,109 @@ input =
 
 value : Node Expression
 value =
-    node
-        (RecordExpr
-            [ node
-                ( node [ node (IdentifierName "description") ]
-                , node (StringExpr [ StringLiteral "Home Manager and NixOS configurations" ])
-                )
-            , node
-                ( node [ node (IdentifierName "inputs") ]
-                , node
-                    (RecordExpr
-                        [ node
-                            ( node
-                                [ node (IdentifierName "nixpkgs")
-                                , node (IdentifierName "url")
-                                ]
-                            , node (StringExpr [ StringLiteral "github:NixOS/nixpkgs/nixos-25.05" ])
-                            )
+    record
+        [ ( [ "description" ]
+          , string "Home Manager and NixOS configurations"
+          )
+        , ( [ "inputs" ]
+          , record
+                [ ( [ "nixpkgs", "url" ]
+                  , string "github:NixOS/nixpkgs/nixos-25.05"
+                  )
+                , ( [ "nixos-hardware", "url" ]
+                  , string "github:NixOS/nixos-hardware/master"
+                  )
+                , ( [ "systems", "url" ]
+                  , string "github:nix-systems/default"
+                  )
+                , ( [ "secretdemoclub" ]
+                  , record
+                        [ ( [ "url" ]
+                          , string "github:miniBill/secretdemoclub?dir=server"
+                          )
+                        , ( [ "inputs", "nixpkgs", "follows" ]
+                          , string "nixpkgs"
+                          )
+                        , ( [ "inputs", "flake-utils", "follows" ]
+                          , string "flake-utils"
+                          )
                         ]
-                    )
-                )
-            , node
-                ( node [ node (IdentifierName "a") ]
-                , node (StringExpr [])
-                )
-            ]
-        )
+                  )
+                , ( [ "pinned-unstable-papermc", "url" ]
+                  , string "github:NixOS/nixpkgs?rev=4cba8b53da471aea2ab2b0c1f30a81e7c451f4b6"
+                  )
+                , ( [ "lix-module" ]
+                  , record
+                        [ ( [ "url" ]
+                          , string "https://git.lix.systems/lix-project/nixos-module/archive/2.93.1.tar.gz"
+                          )
+                        , ( [ "inputs", "nixpkgs", "follows" ]
+                          , string "nixpkgs"
+                          )
+                        , ( [ "inputs", "flake-utils", "follows" ]
+                          , string "flake-utils"
+                          )
+                        ]
+                  )
+                , ( [ "musnix" ]
+                  , record
+                        [ ( [ "url" ]
+                          , string "github:musnix/musnix"
+                          )
+                        , ( [ "inputs", "nixpkgs", "follows" ]
+                          , string "nixpkgs"
+                          )
+                        ]
+                  )
+                , ( [ "agenix" ]
+                  , record
+                        [ ( [ "url" ]
+                          , string "github:ryantm/agenix"
+                          )
+                        , ( [ "inputs", "nixpkgs", "follows" ]
+                          , string "nixpkgs"
+                          )
+                        , ( [ "inputs", "home-manager", "follows" ]
+                          , string "home-manager"
+                          )
+                        , ( [ "inputs", "systems", "follows" ]
+                          , string "systems"
+                          )
+                        ]
+                  )
+                , ( [ "home-manager" ]
+                  , record
+                        [ ( [ "url" ]
+                          , string "github:nix-community/home-manager/release-25.05"
+                          )
+                        , ( [ "inputs", "nixpkgs", "follows" ]
+                          , string "nixpkgs"
+                          )
+                        ]
+                  )
+                , ( [ "nix-index-database" ]
+                  , record
+                        [ ( [ "url" ]
+                          , string "github:nix-community/nix-index-database"
+                          )
+                        , ( [ "inputs", "nixpkgs", "follows" ]
+                          , string "nixpkgs"
+                          )
+                        ]
+                  )
+                , ( [ "flake-utils" ]
+                  , record
+                        [ ( [ "url" ]
+                          , string "github:numtide/flake-utils"
+                          )
+                        , ( [ "inputs", "systems", "follows" ]
+                          , string "systems"
+                          )
+                        ]
+                  )
+                ]
+          )
+        ]
 
 
 suite : Test
