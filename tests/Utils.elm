@@ -34,8 +34,11 @@ checkParser :
 checkParser input value =
     case Nix.Parser.parse input of
         Ok parsed ->
-            parsed
-                |> ExpectEqual.nodeExpression value
+            if ExpectEqual.nodeExpression value parsed then
+                Expect.pass
+
+            else
+                parsed |> Expect.equal value
 
         Err e ->
             Expect.fail (Nix.Parser.errorToString input e)

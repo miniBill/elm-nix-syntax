@@ -1,49 +1,45 @@
 module ExpectEqual exposing (nodeExpression)
 
-import Expect exposing (Expectation)
 import Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), Name(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 
 
-nodeExpression : Node Expression -> Node Expression -> Expectation
+nodeExpression : Node Expression -> Node Expression -> Bool
 nodeExpression e a =
     node expression e a
 
 
-node : (a -> a -> Expectation) -> Node a -> Node a -> Expectation
+node : (a -> a -> Bool) -> Node a -> Node a -> Bool
 node inner (Node _ e) (Node _ a) =
     inner e a
 
 
 list :
-    (a -> a -> Expectation)
+    (a -> a -> Bool)
     -> List a
     -> List a
-    -> Expectation
+    -> Bool
 list inner e a =
     case ( e, a ) of
         ( [], [] ) ->
-            Expect.pass
+            True
 
         ( eh :: et, ah :: at ) ->
-            Expect.all
-                [ \_ -> inner eh ah
-                , \_ -> list inner et at
-                ]
-                ()
+            if inner eh ah then
+                list inner et at
+
+            else
+                False
 
         _ ->
-            Expect.equal e a
+            False
 
 
-expression : Expression -> Expression -> Expectation
+expression : Expression -> Expression -> Bool
 expression e a =
     case ( e, a ) of
         ( ApplicationExpr eh et, ApplicationExpr ah at ) ->
             list nodeExpression (eh :: et) (ah :: at)
-
-        ( VariableExpr ev, VariableExpr av ) ->
-            Expect.equal ev av
 
         ( StringExpr ev, StringExpr av ) ->
             list stringElement ev av
@@ -61,51 +57,44 @@ expression e a =
             list nodeExpression ev av
 
         _ ->
-            Expect.equal e a
+            e == a
 
 
-attribute : Attribute -> Attribute -> Expectation
+attribute : Attribute -> Attribute -> Bool
 attribute e a =
     tuple (node attrPath) nodeExpression e a
 
 
-attrPath : AttrPath -> AttrPath -> Expectation
+attrPath : AttrPath -> AttrPath -> Bool
 attrPath e a =
     list (node name) e a
 
 
-name : Name -> Name -> Expectation
+name : Name -> Name -> Bool
 name e a =
     case ( e, a ) of
-        ( IdentifierName ev, IdentifierName av ) ->
-            Expect.equal ev av
-
         ( StringName ev, StringName av ) ->
             list stringElement ev av
 
         _ ->
-            Expect.equal e a
+            e == a
 
 
 tuple :
-    (a -> a -> Expectation)
-    -> (b -> b -> Expectation)
+    (a -> a -> Bool)
+    -> (b -> b -> Bool)
     -> ( a, b )
     -> ( a, b )
-    -> Expectation
+    -> Bool
 tuple l r ( el, er ) ( al, ar ) =
-    Expect.all
-        [ \_ -> l el al
-        , \_ -> r er ar
-        ]
-        ()
+    l el al && r er ar
 
 
-stringElement : StringElement -> StringElement -> Expectation
+stringElement : StringElement -> StringElement -> Bool
 stringElement e a =
     case ( e, a ) of
         ( StringInterpolation ev, StringInterpolation av ) ->
             nodeExpression ev av
 
         _ ->
-            Expect.equal e a
+            e == a

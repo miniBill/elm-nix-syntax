@@ -242,6 +242,10 @@ value =
                         ]
                     )
                 )
+            , node
+                ( node [ node (IdentifierName "a") ]
+                , node (StringExpr [])
+                )
             ]
         )
 
