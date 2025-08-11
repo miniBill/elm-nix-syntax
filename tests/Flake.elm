@@ -1,6 +1,6 @@
 module Flake exposing (suite)
 
-import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
+import Nix.Syntax.Expression exposing (Attribute, Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Test exposing (Test)
 import Utils exposing (apply, dot, function, let_, list, node, parens, record, string, update, var)
@@ -166,6 +166,7 @@ input =
         };
         "llibinim@uriel" = withConfig {
           system = "x86_64-linux";
+          username = "llibinim";
           module = ./machines/uriel/home-manager.nix;
         };
         "minibill@nathanda" = withConfig {
@@ -453,7 +454,135 @@ outputs =
         , ( "pkgs", pkgs )
         , ( "withConfig", withConfig )
         ]
-        (record [])
+        (record
+            [ ( [ "homeConfigurations" ]
+              , node (RecordExpr homeConfigurations)
+              )
+            , ( [ "nixosConfigurations" ]
+              , record nixosConfigurations
+              )
+            ]
+        )
+
+
+homeConfigurations : List (Node Attribute)
+homeConfigurations =
+    let
+        conf :
+            { a
+                | username : Maybe String
+                , arch : String
+                , os : String
+            }
+            -> String
+            -> Node Attribute
+        conf c name =
+            node
+                ( node
+                    [ node
+                        (StringName
+                            [ StringLiteral
+                                (Maybe.withDefault "minibill" c.username ++ "@" ++ name)
+                            ]
+                        )
+                    ]
+                , apply
+                    (var "withConfig")
+                    [ record
+                        (List.filterMap identity
+                            [ Just
+                                ( [ "system" ]
+                                , string (c.arch ++ "-" ++ c.os)
+                                )
+                            , Maybe.map
+                                (\u -> ( [ "username" ], string u ))
+                                c.username
+                            , Just
+                                ( [ "module" ]
+                                , node
+                                    (PathExpr
+                                        [ "."
+                                        , "machines"
+                                        , name
+                                        , "home-manager.nix"
+                                        ]
+                                    )
+                                )
+                            ]
+                        )
+                    ]
+                )
+
+        d : { arch : String, os : String, username : Maybe String }
+        d =
+            { arch = "x86_64"
+            , os = "linux"
+            , username = Nothing
+            }
+    in
+    [ conf { d | arch = "aarch64", os = "darwin" } "gadiriel"
+    , conf { d | arch = "aarch64" } "ithaca"
+    , conf { d | arch = "aarch64" } "sohu"
+    , conf d "thamiel"
+    , conf d "tharmas"
+    , conf d "edge"
+    , conf { d | username = Just "francesca" } "edge"
+    , conf d "milky"
+    , conf d "uriel"
+    , conf { d | username = Just "llibinim" } "uriel"
+    , conf d "nathanda"
+    ]
+
+
+nixosConfigurations : List ( List String, Node Expression )
+nixosConfigurations =
+    let
+        conf :
+            String
+            -> String
+            -> ( List String, Node Expression )
+        conf arch name =
+            ( [ name
+              ]
+            , apply
+                (dot (var "inputs")
+                    [ "nixpkgs"
+                    , "lib"
+                    , "nixosSystem"
+                    ]
+                )
+                [ record
+                    [ ( [ "system" ]
+                      , string (arch ++ "-linux")
+                      )
+                    , ( [ "specialArgs" ]
+                      , var "inputs"
+                      )
+                    , ( [ "modules" ]
+                      , list
+                            [ node
+                                (PathExpr
+                                    [ "."
+                                    , "machines"
+                                    , name
+                                    , "configuration.nix"
+                                    ]
+                                )
+                            ]
+                      )
+                    ]
+                ]
+            )
+    in
+    [ conf "x86_64" "uriel"
+    , conf "aarch64" "sohu"
+    , conf "x86_64" "tharmas"
+    , conf "x86_64" "edge"
+    , conf "x86_64" "thamiel"
+    , conf "aarch64" "ithaca"
+    , conf "x86_64" "milky"
+    , conf "x86_64" "nathanda"
+    ]
 
 
 suite : Test
