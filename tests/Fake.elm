@@ -16,26 +16,26 @@ expression e =
         ApplicationExpr c cs ->
             ApplicationExpr (nodeExpression c) (List.map nodeExpression cs)
 
-        Negation c ->
-            Negation (nodeExpression c)
+        NegationExpr c ->
+            NegationExpr (nodeExpression c)
 
         StringExpr cs ->
             StringExpr (List.map stringElement cs)
 
-        ParenthesizedExpression c ->
-            ParenthesizedExpression (nodeExpression c)
+        ParenthesizedExpr c ->
+            ParenthesizedExpr (nodeExpression c)
 
-        LetExpression ds c ->
-            LetExpression (List.map (node letDeclaration) ds) (nodeExpression c)
+        LetExpr ds c ->
+            LetExpr (List.map (node letDeclaration) ds) (nodeExpression c)
 
-        AttributeSelection v a d ->
-            AttributeSelection
+        AttributeSelectionExpr v a d ->
+            AttributeSelectionExpr
                 (nodeExpression v)
                 (List.map (node identityString) a)
                 (Maybe.map nodeExpression d)
 
-        UpdateExpression l r ->
-            UpdateExpression (nodeExpression l) (nodeExpression r)
+        UpdateExpr l r ->
+            UpdateExpr (nodeExpression l) (nodeExpression r)
 
         FunctionExpr p c ->
             FunctionExpr (node pattern p) (nodeExpression c)

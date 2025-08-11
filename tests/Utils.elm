@@ -1,4 +1,4 @@
-module Utils exposing (apply, checkParser, dot, function, key, let_, list, node, parens, record, string, var)
+module Utils exposing (apply, checkParser, dot, function, key, let_, list, node, parens, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -46,14 +46,19 @@ var v =
     node (VariableExpr v)
 
 
+update : Node Expression -> Node Expression -> Node Expression
+update l r =
+    node (UpdateExpr l r)
+
+
 parens : Node Expression -> Node Expression
 parens v =
-    node (ParenthesizedExpression v)
+    node (ParenthesizedExpr v)
 
 
 dot : Node Expression -> List String -> Node Expression
 dot e k =
-    node (AttributeSelection e (List.map node k) Nothing)
+    node (AttributeSelectionExpr e (List.map node k) Nothing)
 
 
 let_ :
@@ -62,7 +67,7 @@ let_ :
     -> Node Expression
 let_ cs e =
     node
-        (LetExpression
+        (LetExpr
             (List.map
                 (\( k, v ) -> node ( node k, v ))
                 cs
@@ -105,7 +110,28 @@ checkParser input value =
 toStringish : a -> String
 toStringish v =
     Debug.toString v
+        |> String.replace " { end = { column = 0, row = 0 }, start = { column = 0, row = 0 } }" ""
         |> String.replace "Node" "\nNode"
+        |> String.split "\n"
+        |> List.foldl
+            (\e ( a, ai ) ->
+                let
+                    nai =
+                        if String.contains "Node [" e || String.contains "Node (" e then
+                            ai + 0.25
+
+                        else if String.contains "Node ]" e || String.contains "Node )" e then
+                            ai - 0.25
+
+                        else
+                            ai
+                in
+                ( (String.repeat (floor ai - 16) " " ++ e) :: a, nai )
+            )
+            ( [], 0 )
+        |> Tuple.first
+        |> List.reverse
+        |> String.join "\n"
         |> String.trim
 
 

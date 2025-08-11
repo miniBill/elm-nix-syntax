@@ -71,42 +71,48 @@ expression =
         )
 
 
+expression_14_logicalImplication : Parser (Node Expression)
 expression_14_logicalImplication =
     oneOf
         [ expression_13_logicalDisjunction
         ]
 
 
+expression_13_logicalDisjunction : Parser (Node Expression)
 expression_13_logicalDisjunction =
     oneOf
         [ expression_12_logicalConjunction
         ]
 
 
+expression_12_logicalConjunction : Parser (Node Expression)
 expression_12_logicalConjunction =
     oneOf
         [ expression_11_equality
         ]
 
 
+expression_11_equality : Parser (Node Expression)
 expression_11_equality =
     oneOf
         [ expression_10_comparison
         ]
 
 
+expression_10_comparison : Parser (Node Expression)
 expression_10_comparison =
     oneOf
         [ expression_9_update ]
 
 
+expression_9_update : Parser (Node Expression)
 expression_9_update =
     node
         (succeed (\x f -> f x)
             |= expression_8_logicalNegation
             |. spaces
             |= oneOf
-                [ succeed (\r l -> UpdateExpression l r)
+                [ succeed (\r l -> UpdateExpr l r)
                     |. symbol (token "//")
                     |. spaces
                     |= lazy (\_ -> expression_9_update)
@@ -115,30 +121,35 @@ expression_9_update =
         )
 
 
+expression_8_logicalNegation : Parser (Node Expression)
 expression_8_logicalNegation =
     oneOf
         [ expression_7_additionSubtraction
         ]
 
 
+expression_7_additionSubtraction : Parser (Node Expression)
 expression_7_additionSubtraction =
     oneOf
         [ expression_6_multiplicationDivision
         ]
 
 
+expression_6_multiplicationDivision : Parser (Node Expression)
 expression_6_multiplicationDivision =
     oneOf
         [ expression_5_concatenation
         ]
 
 
+expression_5_concatenation : Parser (Node Expression)
 expression_5_concatenation =
     oneOf
         [ expression_4_hasAttribute
         ]
 
 
+expression_4_hasAttribute : Parser (Node Expression)
 expression_4_hasAttribute =
     oneOf
         [ expression_3_negation
@@ -149,7 +160,7 @@ expression_3_negation : Parser (Node Expression)
 expression_3_negation =
     oneOf
         [ node
-            (succeed Negation
+            (succeed NegationExpr
                 |. symbol (token "-")
                 |. spaces
                 |= expression_2_applicatin
@@ -191,7 +202,7 @@ expression_1_attributeSelection =
                             succeed (Node.value atom)
 
                         else
-                            succeed (AttributeSelection atom identifiers)
+                            succeed (AttributeSelectionExpr atom identifiers)
                                 |. spaces
                                 |= oneOf
                                     [ succeed Just
@@ -213,7 +224,7 @@ expression_0_atom =
             [ map StringExpr string
             , map RecordExpr attributeSet
             , map ListExpr list
-            , map ParenthesizedExpression parenthesizedExpression
+            , map ParenthesizedExpr parenthesizedExpression
             , map VariableExpr identifier
             , map PathExpr path
             ]
@@ -260,7 +271,7 @@ letIn =
         |. keyword (token "let")
         |. spaces
         |= inContext ParsingLet
-            (succeed LetExpression
+            (succeed LetExpr
                 |= many letDeclaration
                 |. keyword (token "in")
                 |. spaces
@@ -573,7 +584,7 @@ list =
                 , end = token "]"
                 , spaces = spaces
                 , trailing = Parser.Optional
-                , item = lazy (\_ -> expression_2_applicatin)
+                , item = lazy (\_ -> expression_1_attributeSelection)
                 }
             )
 

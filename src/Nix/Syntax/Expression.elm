@@ -14,16 +14,16 @@ type
       -- | Integer Int
       -- | Hex Int
       -- | Floatable Float
-    | Negation (Node Expression)
+    | NegationExpr (Node Expression)
     | StringExpr (List StringElement)
       -- | CharLiteral Char
       -- | TupledExpression (List (Node Expression))
-    | ParenthesizedExpression (Node Expression)
-    | LetExpression (List (Node LetDeclaration)) (Node Expression)
+    | ParenthesizedExpr (Node Expression)
+    | LetExpr (List (Node LetDeclaration)) (Node Expression)
       -- | CaseExpression CaseBlock
-    | AttributeSelection (Node Expression) (List (Node String)) (Maybe (Node Expression))
+    | AttributeSelectionExpr (Node Expression) (List (Node String)) (Maybe (Node Expression))
       -- | RecordAccessFunction String
-    | UpdateExpression (Node Expression) (Node Expression)
+    | UpdateExpr (Node Expression) (Node Expression)
     | FunctionExpr (Node Pattern) (Node Expression)
     | RecordExpr (List (Node Attribute))
     | ListExpr (List (Node Expression))

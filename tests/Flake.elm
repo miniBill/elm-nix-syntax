@@ -1,9 +1,9 @@
 module Flake exposing (suite)
 
-import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), StringElement(..))
+import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Test exposing (Test)
-import Utils exposing (apply, dot, function, key, let_, list, node, parens, record, string, var)
+import Utils exposing (apply, dot, function, let_, list, node, parens, record, string, update, var)
 
 
 input : String
@@ -226,12 +226,8 @@ value =
         [ ( [ "description" ]
           , string "Home Manager and NixOS configurations"
           )
-        , ( [ "inputs" ]
-          , inputs
-          )
-        , ( [ "outputs" ]
-          , function "inputs" outputs
-          )
+        , ( [ "inputs" ], inputs )
+        , ( [ "outputs" ], function "inputs" outputs )
         ]
 
 
@@ -337,9 +333,10 @@ inputs =
 
 outputs : Node Expression
 outputs =
-    let_
-        [ ( "allowedUnfree"
-          , list
+    let
+        allowedUnfree : Node Expression
+        allowedUnfree =
+            list
                 [ string "code"
                 , string "discord"
                 , string "google-chrome"
@@ -349,12 +346,13 @@ outputs =
                 , string "vscode"
                 , string "zoom"
                 ]
-          )
-        , ( "pkgs"
-          , function "system"
+
+        pkgs : Node Expression
+        pkgs =
+            function "system"
                 (apply (var "import")
                     [ dot
-                        (var "input")
+                        (var "inputs")
                         [ "nixpkgs" ]
                     , record
                         [ ( [ "system" ]
@@ -394,7 +392,66 @@ outputs =
                         ]
                     ]
                 )
-          )
+
+        withConfig : Node Expression
+        withConfig =
+            node
+                (FunctionExpr
+                    (node
+                        (RecordPattern
+                            [ RecordFieldPattern
+                                (node "system")
+                                Nothing
+                            , RecordFieldPattern
+                                (node "username")
+                                (Just (string "minibill"))
+                            , RecordFieldPattern
+                                (node "module")
+                                Nothing
+                            ]
+                            { open = False
+                            }
+                        )
+                    )
+                    (apply
+                        (dot
+                            (var "inputs")
+                            [ "home-manager"
+                            , "lib"
+                            , "homeManagerConfiguration"
+                            ]
+                        )
+                        [ record
+                            [ ( [ "pkgs" ]
+                              , apply
+                                    (var "pkgs")
+                                    [ var "system"
+                                    ]
+                              )
+                            , ( [ "modules" ]
+                              , list
+                                    [ var "module"
+                                    ]
+                              )
+                            , ( [ "extraSpecialArgs" ]
+                              , update
+                                    (var "inputs")
+                                    (record
+                                        [ ( [ "username" ]
+                                          , var "username"
+                                          )
+                                        ]
+                                    )
+                              )
+                            ]
+                        ]
+                    )
+                )
+    in
+    let_
+        [ ( "allowedUnfree", allowedUnfree )
+        , ( "pkgs", pkgs )
+        , ( "withConfig", withConfig )
         ]
         (record [])
 
