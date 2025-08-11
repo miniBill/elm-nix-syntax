@@ -1,7 +1,5 @@
 module Flake exposing (suite)
 
-import Expect
-import Nix.Parser as Parser
 import Nix.Syntax.Expression exposing (Expression(..), Name(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Test exposing (Test)
@@ -252,10 +250,4 @@ suite : Test
 suite =
     Test.test "Parsing flake.nix" <|
         \_ ->
-            case Parser.parse input of
-                Ok parsed ->
-                    parsed
-                        |> Expect.equal value
-
-                Err e ->
-                    Expect.fail (Parser.errorToString input e)
+            Utils.checkParser input value

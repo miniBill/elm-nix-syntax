@@ -7,13 +7,15 @@ import Nix.Syntax.Expression
         ( AttrPath
         , Attribute
         , Expression(..)
+        , LetDeclaration
         , Name(..)
         , Pattern(..)
+        , RecordFieldPattern(..)
         , StringElement(..)
         )
-import Nix.Syntax.Node exposing (Node(..))
+import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
-import Parser.Advanced as Parser exposing ((|.), (|=), Token(..))
+import Parser.Advanced as Parser exposing ((|.), (|=), Step(..), Token(..), andThen, backtrackable, end, inContext, keyword, lazy, loop, map, oneOf, problem, succeed, symbol)
 import Parser.Advanced.Workaround
 import Set exposing (Set)
 
@@ -24,6 +26,9 @@ type Context
     | ParsingList
     | ParsingAttrset
     | ParsingFunction
+    | ParsingLet
+    | ParsingApplication
+    | ParsingPattern
 
 
 type Problem
@@ -45,76 +50,220 @@ type alias DeadEnd =
 parse : String -> Result (List DeadEnd) (Node Expression)
 parse input =
     Parser.run
-        (Parser.succeed identity
+        (succeed identity
             |. spaces
             |= expression
-            |. Parser.end ExpectingEnd
+            |. end ExpectingEnd
         )
         input
 
 
 expression : Parser (Node Expression)
 expression =
-    Parser.inContext ParsingExpression <|
-        nodify
-            (Parser.oneOf
-                [ Parser.map StringExpr string
-                , Parser.map RecordExpr attributeSet
-                , Parser.map ListExpr list
-                , function
-                ]
-            )
+    inContext ParsingExpression
+        (oneOf
+            [ node letIn
+            , node function
+            , expression_2_applicatin
+            ]
+        )
+
+
+expression_2_applicatin : Parser (Node Expression)
+expression_2_applicatin =
+    oneOf
+        [ node application
             |. spaces
+        , expression_1_attributeSelection
+        ]
+
+
+application : Parser Expression
+application =
+    succeed (\head tail -> ApplicationExpr head tail)
+        |= backtrackable expression_1_attributeSelection
+        |= inContext ParsingApplication (some expression_1_attributeSelection)
+
+
+expression_1_attributeSelection : Parser (Node Expression)
+expression_1_attributeSelection =
+    node
+        (oneOf
+            [ succeed Tuple.pair
+                |= expression_0_atom
+                |= many
+                    (succeed identity
+                        |. symbol (token ".")
+                        |= node identifier
+                    )
+                |> andThen
+                    (\( atom, identifiers ) ->
+                        if List.isEmpty identifiers then
+                            succeed (Node.value atom)
+
+                        else
+                            succeed (AttributeSelection atom identifiers)
+                                |. spaces
+                                |= oneOf
+                                    [ succeed Just
+                                        |. keyword (token "or")
+                                        |. spaces
+                                        |= lazy (\_ -> expression)
+                                    , succeed Nothing
+                                    ]
+                    )
+            ]
+            |. spaces
+        )
+
+
+expression_0_atom : Parser (Node Expression)
+expression_0_atom =
+    node
+        (oneOf
+            [ map StringExpr string
+            , map RecordExpr attributeSet
+            , map ListExpr list
+            , map ParenthesizedExpression parenthesizedExpression
+            , map VariableExpr identifier
+            ]
+        )
+
+
+parenthesizedExpression : Parser (Node Expression)
+parenthesizedExpression =
+    succeed identity
+        |. symbol (token "(")
+        |. spaces
+        |= lazy (\_ -> expression)
+        |. spaces
+        |. symbol (token ")")
+
+
+letIn : Parser Expression
+letIn =
+    succeed identity
+        |. keyword (token "let")
+        |. spaces
+        |= inContext ParsingLet
+            (succeed LetExpression
+                |= many letDeclaration
+                |. keyword (token "in")
+                |= lazy (\_ -> expression)
+            )
+
+
+letDeclaration : Parser (Node LetDeclaration)
+letDeclaration =
+    node
+        (succeed Tuple.pair
+            |= node identifier
+            |. spaces
+            |. symbol (token "=")
+            |. spaces
+            |= lazy (\_ -> expression)
+            |. spaces
+            |. symbol (token ";")
+            |. spaces
+        )
 
 
 function : Parser Expression
 function =
-    Parser.succeed FunctionExpr
-        |= Parser.backtrackable pattern
-        |. Parser.backtrackable spaces
-        |. Parser.symbol (token ":")
-        |= Parser.inContext ParsingFunction
-            (Parser.succeed identity
+    succeed FunctionExpr
+        |= pattern
+        |. symbol (token ":")
+        |= inContext ParsingFunction
+            (succeed identity
                 |. spaces
-                |= Parser.lazy (\_ -> expression)
+                |= lazy (\_ -> expression)
             )
 
 
 pattern : Parser (Node Pattern)
 pattern =
-    nodify
-        (Parser.oneOf
-            [ Parser.succeed VarPattern
-                |= identifier
-            , Parser.succeed AllPattern
-                |. Parser.symbol (token "_")
-            , Parser.succeed identity
-                |. Parser.symbol (token "{")
-                |= Parser.oneOf
-                    [ Parser.problem (Unimplemented "set pattern")
-
-                    -- Rember defaults in params
-                    , Parser.problem (Unimplemented "open set pattern")
-                    ]
-            , Parser.problem (Unimplemented "@-pattern")
-            ]
+    node
+        (inContext ParsingPattern
+            (oneOf
+                [ succeed identity
+                    |. backtrackable (symbol (token "{"))
+                    |. backtrackable spaces
+                    |= Parser.oneOf
+                        [ succeed RecordPattern
+                            |= loop [] recordPatternStep
+                            |. spaces
+                            |= oneOf
+                                [ succeed { open = True }
+                                    |. symbol (token ",")
+                                    |. spaces
+                                    |. symbol (token "...")
+                                , succeed { open = False }
+                                ]
+                            |. spaces
+                        , succeed (RecordPattern [] { open = False })
+                        ]
+                    |. backtrackable (symbol (token "}"))
+                , succeed VarPattern
+                    |= backtrackable identifier
+                , succeed AllPattern
+                    |. symbol (token "_")
+                , problem (Unimplemented "@-pattern")
+                ]
+            )
         )
+        |. backtrackable spaces
+
+
+recordPatternStep :
+    List RecordFieldPattern
+    -> Parser (Step (List RecordFieldPattern) (List RecordFieldPattern))
+recordPatternStep revItems =
+    oneOf
+        [ succeed
+            (\item ->
+                Loop (item :: revItems)
+            )
+            |= backtrackable recordFieldPattern
+            |. backtrackable spaces
+            |. backtrackable (symbol (token ","))
+            |. backtrackable spaces
+        , succeed ()
+            |> map
+                (\_ ->
+                    Done (List.reverse revItems)
+                )
+        ]
+
+
+recordFieldPattern : Parser RecordFieldPattern
+recordFieldPattern =
+    succeed RecordFieldPattern
+        |= node identifier
+        |. spaces
+        |= oneOf
+            [ succeed Just
+                |. symbol (token "?")
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. spaces
+            , succeed Nothing
+            ]
 
 
 string : Parser (List StringElement)
 string =
-    Parser.oneOf
-        [ Parser.succeed identity
-            |. Parser.symbol (token "\"")
-            |= Parser.inContext ParsingString
-                (Parser.succeed identity
+    oneOf
+        [ succeed identity
+            |. symbol (token "\"")
+            |= inContext ParsingString
+                (succeed identity
                     |= many stringElement
-                    |. Parser.symbol (token "\"")
+                    |. symbol (token "\"")
                 )
-        , Parser.succeed identity
-            |= Parser.problem (Unimplemented "indented string")
-        , Parser.succeed identity
-            |= Parser.problem (Unimplemented "uri")
+        , succeed identity
+            |= problem (Unimplemented "indented string")
+        , succeed identity
+            |= problem (Unimplemented "uri")
         ]
 
 
@@ -123,9 +272,9 @@ token t =
     Parser.Token t (Expecting t)
 
 
-nodify : Parser a -> Parser (Node a)
-nodify inner =
-    Parser.succeed
+node : Parser a -> Parser (Node a)
+node inner =
+    succeed
         (\start value end ->
             Node
                 { start = start
@@ -140,7 +289,7 @@ nodify inner =
 
 location : Parser Location
 location =
-    Parser.succeed
+    succeed
         (\row column ->
             { row = row
             , column = column
@@ -152,40 +301,40 @@ location =
 
 stringElement : Parser StringElement
 stringElement =
-    Parser.oneOf
-        [ Parser.succeed (StringLiteral "$${")
-            |. Parser.symbol (token "$${")
-        , Parser.succeed StringInterpolation
-            |. Parser.symbol (token "${")
-            |= Parser.lazy (\_ -> expression)
-            |. Parser.symbol (token "}")
-        , Parser.succeed (\chars -> StringLiteral (String.fromList chars))
+    oneOf
+        [ succeed (StringLiteral "$${")
+            |. symbol (token "$${")
+        , succeed StringInterpolation
+            |. symbol (token "${")
+            |= lazy (\_ -> expression)
+            |. symbol (token "}")
+        , succeed (\chars -> StringLiteral (String.fromList chars))
             |= some stringChar
         ]
 
 
 some : Parser a -> Parser (List a)
 some inner =
-    Parser.succeed (::)
+    succeed (::)
         |= inner
         |= many inner
 
 
 stringChar : Parser Char
 stringChar =
-    Parser.oneOf
-        [ Parser.succeed '\\'
-            |. Parser.symbol (token "\\\\")
-        , Parser.succeed '"'
-            |. Parser.symbol (token "\\\"")
-        , Parser.succeed '$'
-            |. Parser.symbol (token "\\$")
-        , Parser.succeed '\u{000D}'
-            |. Parser.symbol (token "\\r")
-        , Parser.succeed '\n'
-            |. Parser.symbol (token "\\n")
-        , Parser.succeed '\t'
-            |. Parser.symbol (token "\\t")
+    oneOf
+        [ succeed '\\'
+            |. symbol (token "\\\\")
+        , succeed '"'
+            |. symbol (token "\\\"")
+        , succeed '$'
+            |. symbol (token "\\$")
+        , succeed '\u{000D}'
+            |. symbol (token "\\r")
+        , succeed '\n'
+            |. symbol (token "\\n")
+        , succeed '\t'
+            |. symbol (token "\\t")
         , Parser.chompIf (\c -> c /= '\\' && c /= '"')
             (Expecting "String character")
             |> Parser.getChompedString
@@ -193,10 +342,10 @@ stringChar =
                 (\c ->
                     case String.toList c of
                         [ x ] ->
-                            Parser.succeed x
+                            succeed x
 
                         _ ->
-                            Parser.problem UnexpectedChar
+                            problem UnexpectedChar
                 )
         ]
 
@@ -206,7 +355,7 @@ many item =
     Parser.sequence
         { start = token ""
         , end = token ""
-        , spaces = Parser.succeed ()
+        , spaces = succeed ()
         , item = item
         , trailing = Parser.Optional
         , separator = token ""
@@ -215,9 +364,9 @@ many item =
 
 attributeSet : Parser (List (Node Attribute))
 attributeSet =
-    Parser.succeed identity
-        |. Parser.symbol (token "{")
-        |= Parser.inContext ParsingAttrset
+    succeed identity
+        |. symbol (token "{")
+        |= inContext ParsingAttrset
             (Parser.sequence
                 { start = token ""
                 , spaces = spaces
@@ -231,26 +380,26 @@ attributeSet =
 
 attribute : Parser (Node Attribute)
 attribute =
-    nodify
-        (Parser.succeed Tuple.pair
+    node
+        (succeed Tuple.pair
             |= attrPath
             |. spaces
-            |. Parser.symbol (token "=")
+            |. symbol (token "=")
             |. spaces
-            |= Parser.lazy (\_ -> expression)
+            |= lazy (\_ -> expression)
             |. spaces
-            |. Parser.symbol (token ";")
+            |. symbol (token ";")
         )
 
 
 attrPath : Parser (Node AttrPath)
 attrPath =
-    nodify
+    node
         (Parser.sequence
             { start = token ""
             , end = token ""
             , separator = token "."
-            , spaces = Parser.succeed ()
+            , spaces = succeed ()
             , trailing = Parser.Forbidden
             , item = name
             }
@@ -259,11 +408,11 @@ attrPath =
 
 name : Parser (Node Name)
 name =
-    nodify
-        (Parser.oneOf
-            [ Parser.succeed StringName
+    node
+        (oneOf
+            [ succeed StringName
                 |= string
-            , Parser.succeed IdentifierName
+            , succeed IdentifierName
                 |= identifier
             ]
         )
@@ -298,16 +447,16 @@ reserved =
 
 list : Parser (List (Node Expression))
 list =
-    Parser.succeed identity
-        |. Parser.symbol (token "[")
-        |= Parser.inContext ParsingList
+    succeed identity
+        |. symbol (token "[")
+        |= inContext ParsingList
             (Parser.sequence
                 { start = token ""
                 , separator = token ""
                 , end = token "]"
                 , spaces = spaces
                 , trailing = Parser.Optional
-                , item = Parser.lazy (\_ -> expression)
+                , item = lazy (\_ -> expression_2_applicatin)
                 }
             )
 
@@ -315,9 +464,9 @@ list =
 spaces : Parser ()
 spaces =
     innerSpaces
-        |. Parser.oneOf
-            [ comment |. Parser.lazy (\_ -> spaces)
-            , Parser.succeed ()
+        |. oneOf
+            [ comment |. lazy (\_ -> spaces)
+            , succeed ()
             ]
 
 
@@ -482,6 +631,15 @@ contextToString context =
 
         ParsingFunction ->
             "function"
+
+        ParsingLet ->
+            "let"
+
+        ParsingApplication ->
+            "application"
+
+        ParsingPattern ->
+            "pattern"
 
 
 problemToString : Problem -> String
