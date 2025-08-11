@@ -1,30 +1,16 @@
-module Utils exposing (checkParser, emptyLocation, emptyRange, node)
+module Utils exposing (checkParser, node)
 
 import Expect
-import ExpectEqual
+import Fake
 import Nix.Parser
-import Nix.Syntax.Expression exposing (Expression)
+import Nix.Syntax.Expression exposing (Expression(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location, Range)
 
 
 node : a -> Node a
 node x =
-    Node emptyRange x
-
-
-emptyRange : Range
-emptyRange =
-    { start = emptyLocation
-    , end = emptyLocation
-    }
-
-
-emptyLocation : Location
-emptyLocation =
-    { row = 0
-    , column = 0
-    }
+    Node Fake.emptyRange x
 
 
 checkParser :
@@ -34,11 +20,9 @@ checkParser :
 checkParser input value =
     case Nix.Parser.parse input of
         Ok parsed ->
-            if ExpectEqual.nodeExpression value parsed then
-                Expect.pass
-
-            else
-                parsed |> Expect.equal value
+            parsed
+                |> Fake.nodeExpression
+                |> Expect.equal value
 
         Err e ->
             Expect.fail (Nix.Parser.errorToString input e)
