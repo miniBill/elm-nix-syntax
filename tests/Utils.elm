@@ -1,4 +1,4 @@
-module Utils exposing (checkParser, key, node, record, string)
+module Utils exposing (apply, checkParser, dot, function, key, let_, list, node, parens, record, string, var)
 
 import Ansi.Color
 import Diff
@@ -6,7 +6,7 @@ import Diff.ToString
 import Expect
 import Fake
 import Nix.Parser
-import Nix.Syntax.Expression exposing (AttrPath, Expression(..), Name(..), StringElement(..))
+import Nix.Syntax.Expression exposing (AttrPath, Expression(..), Name(..), Pattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 
 
@@ -23,6 +23,51 @@ record attrs =
                 )
                 attrs
             )
+        )
+
+
+list : List (Node Expression) -> Node Expression
+list cs =
+    node (ListExpr cs)
+
+
+function : String -> Node Expression -> Node Expression
+function v e =
+    node (FunctionExpr (node (VarPattern v)) e)
+
+
+apply : Node Expression -> List (Node Expression) -> Node Expression
+apply v cs =
+    node (ApplicationExpr v cs)
+
+
+var : String -> Node Expression
+var v =
+    node (VariableExpr v)
+
+
+parens : Node Expression -> Node Expression
+parens v =
+    node (ParenthesizedExpression v)
+
+
+dot : Node Expression -> List String -> Node Expression
+dot e k =
+    node (AttributeSelection e (List.map node k) Nothing)
+
+
+let_ :
+    List ( String, Node Expression )
+    -> Node Expression
+    -> Node Expression
+let_ cs e =
+    node
+        (LetExpression
+            (List.map
+                (\( k, v ) -> node ( node k, v ))
+                cs
+            )
+            e
         )
 
 

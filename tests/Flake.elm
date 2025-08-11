@@ -1,9 +1,9 @@
 module Flake exposing (suite)
 
-import Nix.Syntax.Expression exposing (Expression(..), Name(..), StringElement(..))
+import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Test exposing (Test)
-import Utils exposing (key, node, record, string)
+import Utils exposing (apply, dot, function, key, let_, list, node, parens, record, string, var)
 
 
 input : String
@@ -227,104 +227,176 @@ value =
           , string "Home Manager and NixOS configurations"
           )
         , ( [ "inputs" ]
+          , inputs
+          )
+        , ( [ "outputs" ]
+          , function "inputs" outputs
+          )
+        ]
+
+
+inputs : Node Expression
+inputs =
+    record
+        [ ( [ "nixpkgs", "url" ]
+          , string "github:NixOS/nixpkgs/nixos-25.05"
+          )
+        , ( [ "nixos-hardware", "url" ]
+          , string "github:NixOS/nixos-hardware/master"
+          )
+        , ( [ "systems", "url" ]
+          , string "github:nix-systems/default"
+          )
+        , ( [ "secretdemoclub" ]
           , record
-                [ ( [ "nixpkgs", "url" ]
-                  , string "github:NixOS/nixpkgs/nixos-25.05"
+                [ ( [ "url" ]
+                  , string "github:miniBill/secretdemoclub?dir=server"
                   )
-                , ( [ "nixos-hardware", "url" ]
-                  , string "github:NixOS/nixos-hardware/master"
+                , ( [ "inputs", "nixpkgs", "follows" ]
+                  , string "nixpkgs"
                   )
-                , ( [ "systems", "url" ]
-                  , string "github:nix-systems/default"
+                , ( [ "inputs", "flake-utils", "follows" ]
+                  , string "flake-utils"
                   )
-                , ( [ "secretdemoclub" ]
-                  , record
-                        [ ( [ "url" ]
-                          , string "github:miniBill/secretdemoclub?dir=server"
-                          )
-                        , ( [ "inputs", "nixpkgs", "follows" ]
-                          , string "nixpkgs"
-                          )
-                        , ( [ "inputs", "flake-utils", "follows" ]
-                          , string "flake-utils"
-                          )
-                        ]
+                ]
+          )
+        , ( [ "pinned-unstable-papermc", "url" ]
+          , string "github:NixOS/nixpkgs?rev=4cba8b53da471aea2ab2b0c1f30a81e7c451f4b6"
+          )
+        , ( [ "lix-module" ]
+          , record
+                [ ( [ "url" ]
+                  , string "https://git.lix.systems/lix-project/nixos-module/archive/2.93.1.tar.gz"
                   )
-                , ( [ "pinned-unstable-papermc", "url" ]
-                  , string "github:NixOS/nixpkgs?rev=4cba8b53da471aea2ab2b0c1f30a81e7c451f4b6"
+                , ( [ "inputs", "nixpkgs", "follows" ]
+                  , string "nixpkgs"
                   )
-                , ( [ "lix-module" ]
-                  , record
-                        [ ( [ "url" ]
-                          , string "https://git.lix.systems/lix-project/nixos-module/archive/2.93.1.tar.gz"
-                          )
-                        , ( [ "inputs", "nixpkgs", "follows" ]
-                          , string "nixpkgs"
-                          )
-                        , ( [ "inputs", "flake-utils", "follows" ]
-                          , string "flake-utils"
-                          )
-                        ]
+                , ( [ "inputs", "flake-utils", "follows" ]
+                  , string "flake-utils"
                   )
-                , ( [ "musnix" ]
-                  , record
-                        [ ( [ "url" ]
-                          , string "github:musnix/musnix"
-                          )
-                        , ( [ "inputs", "nixpkgs", "follows" ]
-                          , string "nixpkgs"
-                          )
-                        ]
+                ]
+          )
+        , ( [ "musnix" ]
+          , record
+                [ ( [ "url" ]
+                  , string "github:musnix/musnix"
                   )
-                , ( [ "agenix" ]
-                  , record
-                        [ ( [ "url" ]
-                          , string "github:ryantm/agenix"
-                          )
-                        , ( [ "inputs", "nixpkgs", "follows" ]
-                          , string "nixpkgs"
-                          )
-                        , ( [ "inputs", "home-manager", "follows" ]
-                          , string "home-manager"
-                          )
-                        , ( [ "inputs", "systems", "follows" ]
-                          , string "systems"
-                          )
-                        ]
+                , ( [ "inputs", "nixpkgs", "follows" ]
+                  , string "nixpkgs"
                   )
-                , ( [ "home-manager" ]
-                  , record
-                        [ ( [ "url" ]
-                          , string "github:nix-community/home-manager/release-25.05"
-                          )
-                        , ( [ "inputs", "nixpkgs", "follows" ]
-                          , string "nixpkgs"
-                          )
-                        ]
+                ]
+          )
+        , ( [ "agenix" ]
+          , record
+                [ ( [ "url" ]
+                  , string "github:ryantm/agenix"
                   )
-                , ( [ "nix-index-database" ]
-                  , record
-                        [ ( [ "url" ]
-                          , string "github:nix-community/nix-index-database"
-                          )
-                        , ( [ "inputs", "nixpkgs", "follows" ]
-                          , string "nixpkgs"
-                          )
-                        ]
+                , ( [ "inputs", "nixpkgs", "follows" ]
+                  , string "nixpkgs"
                   )
-                , ( [ "flake-utils" ]
-                  , record
-                        [ ( [ "url" ]
-                          , string "github:numtide/flake-utils"
-                          )
-                        , ( [ "inputs", "systems", "follows" ]
-                          , string "systems"
-                          )
-                        ]
+                , ( [ "inputs", "home-manager", "follows" ]
+                  , string "home-manager"
+                  )
+                , ( [ "inputs", "systems", "follows" ]
+                  , string "systems"
+                  )
+                ]
+          )
+        , ( [ "home-manager" ]
+          , record
+                [ ( [ "url" ]
+                  , string "github:nix-community/home-manager/release-25.05"
+                  )
+                , ( [ "inputs", "nixpkgs", "follows" ]
+                  , string "nixpkgs"
+                  )
+                ]
+          )
+        , ( [ "nix-index-database" ]
+          , record
+                [ ( [ "url" ]
+                  , string "github:nix-community/nix-index-database"
+                  )
+                , ( [ "inputs", "nixpkgs", "follows" ]
+                  , string "nixpkgs"
+                  )
+                ]
+          )
+        , ( [ "flake-utils" ]
+          , record
+                [ ( [ "url" ]
+                  , string "github:numtide/flake-utils"
+                  )
+                , ( [ "inputs", "systems", "follows" ]
+                  , string "systems"
                   )
                 ]
           )
         ]
+
+
+outputs : Node Expression
+outputs =
+    let_
+        [ ( "allowedUnfree"
+          , list
+                [ string "code"
+                , string "discord"
+                , string "google-chrome"
+                , string "minecraft-launcher"
+                , string "slack"
+                , string "spotify"
+                , string "vscode"
+                , string "zoom"
+                ]
+          )
+        , ( "pkgs"
+          , function "system"
+                (apply (var "import")
+                    [ dot
+                        (var "input")
+                        [ "nixpkgs" ]
+                    , record
+                        [ ( [ "system" ]
+                          , var "system"
+                          )
+                        , ( [ "config" ]
+                          , record
+                                [ ( [ "allowUnfreePredicate" ]
+                                  , function "pkg"
+                                        (apply
+                                            (dot
+                                                (var "builtins")
+                                                [ "elem" ]
+                                            )
+                                            [ parens
+                                                (apply
+                                                    (dot
+                                                        (var "inputs")
+                                                        [ "nixpkgs"
+                                                        , "lib"
+                                                        , "getName"
+                                                        ]
+                                                    )
+                                                    [ var "pkg" ]
+                                                )
+                                            , var "allowedUnfree"
+                                            ]
+                                        )
+                                  )
+                                , ( [ "permittedInsecurePackages" ]
+                                  , list
+                                        [ string "zotero-6.0.26"
+                                        ]
+                                  )
+                                ]
+                          )
+                        ]
+                    ]
+                )
+          )
+        ]
+        (record [])
 
 
 suite : Test
