@@ -1,4 +1,4 @@
-module Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), LetDeclaration, Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
+module Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), LetDeclaration, Name(..), Path, Pattern(..), RecordFieldPattern(..), StringElement(..))
 
 import Nix.Syntax.Node exposing (Node)
 
@@ -11,11 +11,10 @@ type
     | VariableExpr String
       -- | IfBlock (Node Expression) (Node Expression) (Node Expression)
       -- | PrefixOperator String
-      -- | Operator String
       -- | Integer Int
       -- | Hex Int
       -- | Floatable Float
-      -- | Negation (Node Expression)
+    | Negation (Node Expression)
     | StringExpr (List StringElement)
       -- | CharLiteral Char
       -- | TupledExpression (List (Node Expression))
@@ -24,10 +23,15 @@ type
       -- | CaseExpression CaseBlock
     | AttributeSelection (Node Expression) (List (Node String)) (Maybe (Node Expression))
       -- | RecordAccessFunction String
-      -- | RecordUpdateExpression (Node String) (List (Node RecordSetter))
+    | UpdateExpression (Node Expression) (Node Expression)
     | FunctionExpr (Node Pattern) (Node Expression)
     | RecordExpr (List (Node Attribute))
     | ListExpr (List (Node Expression))
+    | PathExpr Path
+
+
+type alias Path =
+    List String
 
 
 type alias LetDeclaration =

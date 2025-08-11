@@ -9,13 +9,14 @@ import Nix.Syntax.Expression
         , Expression(..)
         , LetDeclaration
         , Name(..)
+        , Path
         , Pattern(..)
         , RecordFieldPattern(..)
         , StringElement(..)
         )
 import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
-import Parser.Advanced as Parser exposing ((|.), (|=), Step(..), Token(..), andThen, backtrackable, end, inContext, keyword, lazy, loop, map, oneOf, problem, succeed, symbol)
+import Parser.Advanced as Parser exposing ((|.), (|=), Step(..), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, loop, map, oneOf, problem, succeed, symbol)
 import Parser.Advanced.Workaround
 import Set exposing (Set)
 
@@ -64,9 +65,97 @@ expression =
         (oneOf
             [ node letIn
             , node function
-            , expression_2_applicatin
+            , expression_14_logicalImplication
             ]
+            |. spaces
         )
+
+
+expression_14_logicalImplication =
+    oneOf
+        [ expression_13_logicalDisjunction
+        ]
+
+
+expression_13_logicalDisjunction =
+    oneOf
+        [ expression_12_logicalConjunction
+        ]
+
+
+expression_12_logicalConjunction =
+    oneOf
+        [ expression_11_equality
+        ]
+
+
+expression_11_equality =
+    oneOf
+        [ expression_10_comparison
+        ]
+
+
+expression_10_comparison =
+    oneOf
+        [ expression_9_update ]
+
+
+expression_9_update =
+    node
+        (succeed (\x f -> f x)
+            |= expression_8_logicalNegation
+            |. spaces
+            |= oneOf
+                [ succeed (\r l -> UpdateExpression l r)
+                    |. symbol (token "//")
+                    |. spaces
+                    |= lazy (\_ -> expression_9_update)
+                , succeed Node.value
+                ]
+        )
+
+
+expression_8_logicalNegation =
+    oneOf
+        [ expression_7_additionSubtraction
+        ]
+
+
+expression_7_additionSubtraction =
+    oneOf
+        [ expression_6_multiplicationDivision
+        ]
+
+
+expression_6_multiplicationDivision =
+    oneOf
+        [ expression_5_concatenation
+        ]
+
+
+expression_5_concatenation =
+    oneOf
+        [ expression_4_hasAttribute
+        ]
+
+
+expression_4_hasAttribute =
+    oneOf
+        [ expression_3_negation
+        ]
+
+
+expression_3_negation : Parser (Node Expression)
+expression_3_negation =
+    oneOf
+        [ node
+            (succeed Negation
+                |. symbol (token "-")
+                |. spaces
+                |= expression_2_applicatin
+            )
+        , expression_2_applicatin
+        ]
 
 
 expression_2_applicatin : Parser (Node Expression)
@@ -126,8 +215,33 @@ expression_0_atom =
             , map ListExpr list
             , map ParenthesizedExpression parenthesizedExpression
             , map VariableExpr identifier
+            , map PathExpr path
             ]
         )
+
+
+path : Parser Path
+path =
+    let
+        valid : Char -> Bool
+        valid c =
+            c /= ' ' && c /= '/' && c /= ';'
+    in
+    oneOf
+        [ succeed (::)
+            |= (succeed "."
+                    |. symbol (token ".")
+               )
+            |= many
+                (succeed identity
+                    |. symbol (token "/")
+                    |= getChompedString
+                        (succeed ()
+                            |. chompIf valid (Expecting "path piece")
+                            |. chompWhile valid
+                        )
+                )
+        ]
 
 
 parenthesizedExpression : Parser (Node Expression)
@@ -149,6 +263,7 @@ letIn =
             (succeed LetExpression
                 |= many letDeclaration
                 |. keyword (token "in")
+                |. spaces
                 |= lazy (\_ -> expression)
             )
 
@@ -442,6 +557,8 @@ reserved =
     Set.fromList
         [ "let"
         , "in"
+        , "with"
+        , "inherit"
         ]
 
 

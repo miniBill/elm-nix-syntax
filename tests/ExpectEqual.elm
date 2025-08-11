@@ -1,7 +1,7 @@
 module ExpectEqual exposing (nodeExpression)
 
 import Expect exposing (Expectation)
-import Nix.Syntax.Expression exposing (Expression(..), StringElement(..))
+import Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), Name(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 
 
@@ -54,14 +54,51 @@ expression e a =
         ( FunctionExpr _ _, _ ) ->
             Debug.todo "branch '( FunctionExpr _ _, _ )' not implemented"
 
-        ( RecordExpr _, _ ) ->
-            Debug.todo "branch '( RecordExpr _, _ )' not implemented"
+        ( RecordExpr ev, RecordExpr av ) ->
+            list (node attribute) ev av
 
-        ( ListExpr _, _ ) ->
-            Debug.todo "branch '( ListExpr _, _ )' not implemented"
+        ( ListExpr ev, ListExpr av ) ->
+            list nodeExpression ev av
 
         _ ->
             Expect.equal e a
+
+
+attribute : Attribute -> Attribute -> Expectation
+attribute e a =
+    tuple (node attrPath) nodeExpression e a
+
+
+attrPath : AttrPath -> AttrPath -> Expectation
+attrPath e a =
+    list (node name) e a
+
+
+name : Name -> Name -> Expectation
+name e a =
+    case ( e, a ) of
+        ( IdentifierName ev, IdentifierName av ) ->
+            Expect.equal ev av
+
+        ( StringName ev, StringName av ) ->
+            list stringElement ev av
+
+        _ ->
+            Expect.equal e a
+
+
+tuple :
+    (a -> a -> Expectation)
+    -> (b -> b -> Expectation)
+    -> ( a, b )
+    -> ( a, b )
+    -> Expectation
+tuple l r ( el, er ) ( al, ar ) =
+    Expect.all
+        [ \_ -> l el al
+        , \_ -> r er ar
+        ]
+        ()
 
 
 stringElement : StringElement -> StringElement -> Expectation
