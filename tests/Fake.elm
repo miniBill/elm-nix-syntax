@@ -1,4 +1,4 @@
-module Fake exposing (..)
+module Fake exposing (emptyRange, nodeExpression)
 
 import Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), LetDeclaration, Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
