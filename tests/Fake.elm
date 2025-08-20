@@ -39,9 +39,6 @@ expression e =
                 (List.map (node identityString) a)
                 (Maybe.map nodeExpression d)
 
-        UpdateExpr l r ->
-            UpdateExpr (nodeExpression l) (nodeExpression r)
-
         FunctionExpr p c ->
             FunctionExpr (nodePattern p) (nodeExpression c)
 
@@ -71,6 +68,9 @@ expression e =
 
         WithExpr l r ->
             WithExpr (nodeExpression l) (nodeExpression r)
+
+        OperatorApplicationExpr l op r ->
+            OperatorApplicationExpr (nodeExpression l) (node identityString op) (nodeExpression r)
 
 
 identityBool : Bool -> Bool

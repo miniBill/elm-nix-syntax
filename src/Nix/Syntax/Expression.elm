@@ -6,7 +6,7 @@ import Nix.Syntax.Node exposing (Node)
 type Expression
     = NullExpr
     | ApplicationExpr (Node Expression) (List (Node Expression))
-      -- | OperatorApplication String InfixDirection (Node Expression) (Node Expression)
+    | OperatorApplicationExpr (Node Expression) (Node String) (Node Expression)
     | VariableExpr String
       -- | IfBlock (Node Expression) (Node Expression) (Node Expression)
       -- | PrefixOperator String
@@ -23,7 +23,6 @@ type Expression
       -- | CaseExpression CaseBlock
     | AttributeSelectionExpr (Node Expression) (List (Node String)) (Maybe (Node Expression))
       -- | RecordAccessFunction String
-    | UpdateExpr (Node Expression) (Node Expression)
     | FunctionExpr (Node Pattern) (Node Expression)
     | RecordExpr (List (Node Attribute))
     | ListExpr (List (Node Expression))

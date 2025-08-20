@@ -126,8 +126,8 @@ expression_9_update =
             |= expression_8_logicalNegation
             |. spaces
             |= oneOf
-                [ succeed (\r l -> UpdateExpr l r)
-                    |. symbol "//"
+                [ succeed (\o r l -> OperatorApplicationExpr l o r)
+                    |= node (succeed "//" |. symbol "//")
                     |. spaces
                     |= lazy (\_ -> expression_9_update)
                 , succeed Node.value
@@ -158,9 +158,7 @@ expression_6_multiplicationDivision =
 
 expression_5_concatenation : Parser (Node Expression)
 expression_5_concatenation =
-    oneOf
-        [ expression_4_hasAttribute
-        ]
+    rightAssociativeOperator expression_4_hasAttribute "++"
 
 
 expression_4_hasAttribute : Parser (Node Expression)
@@ -243,6 +241,32 @@ expression_0_atom =
             , map BoolExpr bool
             , succeed NullExpr |. keyword "null"
             ]
+        )
+
+
+leftAssociativeOperator : String -> Parser (Node Expression) -> Parser (Node Expression)
+leftAssociativeOperator op rightParser =
+    operator (lazy (\_ -> leftAssociativeOperator op rightParser)) op rightParser
+
+
+rightAssociativeOperator : Parser (Node Expression) -> String -> Parser (Node Expression)
+rightAssociativeOperator leftParser op =
+    operator leftParser op (lazy (\_ -> rightAssociativeOperator leftParser op))
+
+
+operator : Parser (Node Expression) -> String -> Parser (Node Expression) -> Parser (Node Expression)
+operator left op right =
+    node
+        (succeed (\x f -> f x)
+            |= left
+            |. spaces
+            |= oneOf
+                [ succeed (\o r l -> OperatorApplicationExpr l o r)
+                    |= node (succeed op |. symbol op)
+                    |. spaces
+                    |= right
+                , succeed Node.value
+                ]
         )
 
 

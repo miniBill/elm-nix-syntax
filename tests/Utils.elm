@@ -49,7 +49,7 @@ var v =
 
 update : Node Expression -> Node Expression -> Node Expression
 update l r =
-    node (UpdateExpr l r)
+    node (OperatorApplicationExpr l (node "//") r)
 
 
 parens : Node Expression -> Node Expression
