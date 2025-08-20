@@ -1,4 +1,4 @@
-module Fake exposing (emptyRange, nodeExpression)
+module Fake exposing (emptyRange, nodeExpression, nodePattern)
 
 import Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), LetDeclaration, Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
@@ -8,6 +8,11 @@ import Nix.Syntax.Range exposing (Location, Range)
 nodeExpression : Node Expression -> Node Expression
 nodeExpression e =
     node expression e
+
+
+nodePattern : Node Pattern -> Node Pattern
+nodePattern p =
+    node pattern p
 
 
 expression : Expression -> Expression
@@ -38,7 +43,7 @@ expression e =
             UpdateExpr (nodeExpression l) (nodeExpression r)
 
         FunctionExpr p c ->
-            FunctionExpr (node pattern p) (nodeExpression c)
+            FunctionExpr (nodePattern p) (nodeExpression c)
 
         RecordExpr attrs ->
             RecordExpr (List.map (node attribute) attrs)
@@ -71,7 +76,7 @@ pattern p =
             VarPattern (identityString v)
 
         ParenthesizedPattern c ->
-            ParenthesizedPattern (node pattern c)
+            ParenthesizedPattern (nodePattern c)
 
 
 recordFieldPattern : RecordFieldPattern -> RecordFieldPattern

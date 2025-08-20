@@ -1,4 +1,4 @@
-module Utils exposing (apply, checkParser, dot, function, key, let_, list, node, parens, record, string, update, var)
+module Utils exposing (apply, checkParser, checkPatternParser, dot, function, key, let_, list, node, parens, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -8,6 +8,7 @@ import Fake
 import Nix.Parser
 import Nix.Syntax.Expression exposing (AttrPath, Expression(..), Name(..), Pattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
+import Parser.Advanced
 
 
 record : List ( List String, Node Expression ) -> Node Expression
@@ -100,6 +101,22 @@ checkParser input value =
         Ok parsed ->
             parsed
                 |> Fake.nodeExpression
+                |> toStringish
+                |> expectEqualMultiline (toStringish value)
+
+        Err e ->
+            Expect.fail (Nix.Parser.errorToString input e)
+
+
+checkPatternParser :
+    String
+    -> Node Pattern
+    -> Expect.Expectation
+checkPatternParser input value =
+    case Parser.Advanced.run Nix.Parser.pattern input of
+        Ok parsed ->
+            parsed
+                |> Fake.nodePattern
                 |> toStringish
                 |> expectEqualMultiline (toStringish value)
 

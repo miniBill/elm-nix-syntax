@@ -1,4 +1,4 @@
-module Nix.Parser exposing (errorToString, parse)
+module Nix.Parser exposing (errorToString, parse, pattern)
 
 import Ansi.Color
 import List.Extra
@@ -324,24 +324,24 @@ pattern =
                             [ succeed Just
                                 |= recordFieldPattern
                             , succeed Nothing
-                                    |. symbol (token "...")
+                                |. symbol (token "...")
                             ]
                     , end = token "}"
                     , separator = token ","
                     , spaces = spaces
                     , trailing = Parser.Optional
                     }
-                , succeed VarPattern
+            , succeed VarPattern
                 |= identifier
-                , succeed AllPattern
-                    |. symbol (token "_")
-                , problem (Unimplemented "@-pattern")
-                ]
+            , succeed AllPattern
+                |. symbol (token "_")
+            , problem (Unimplemented "@-pattern")
+            ]
     in
     node
         (inContext ParsingPattern
             (oneOf inner)
-            )
+        )
         |. spaces
 
 
