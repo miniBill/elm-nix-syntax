@@ -1,4 +1,4 @@
-module Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), LetDeclaration(..), Name(..), Path, Pattern(..), RecordFieldPattern(..), StringElement(..))
+module Nix.Syntax.Expression exposing (AttrPath, Attribute(..), Expression(..), LetDeclaration(..), Name(..), Path, Pattern(..), RecordFieldPattern(..), StringElement(..))
 
 {-|
 
@@ -46,8 +46,10 @@ type LetDeclaration
     | LetInheritFromSet (Node String) (List (Node String))
 
 
-type alias Attribute =
-    ( Node AttrPath, Node Expression )
+type Attribute
+    = Attribute (Node AttrPath) (Node Expression)
+    | AttributeInheritVariables (List (Node String))
+    | AttributeInheritFromSet (Node String) (List (Node String))
 
 
 type alias AttrPath =

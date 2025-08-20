@@ -1,6 +1,6 @@
 module Flake exposing (suite)
 
-import Nix.Syntax.Expression exposing (Attribute, Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
+import Nix.Syntax.Expression exposing (Attribute(..), Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
 import Test exposing (Test)
 import Utils exposing (apply, dot, function, let_, list, node, parens, record, string, update, var)
@@ -478,39 +478,42 @@ homeConfigurations =
             -> Node Attribute
         conf c name =
             node
-                ( node
-                    [ node
-                        (StringName
-                            [ StringLiteral
-                                (Maybe.withDefault "minibill" c.username ++ "@" ++ name)
-                            ]
-                        )
-                    ]
-                , apply
-                    (var "withConfig")
-                    [ record
-                        (List.filterMap identity
-                            [ Just
-                                ( [ "system" ]
-                                , string (c.arch ++ "-" ++ c.os)
-                                )
-                            , Maybe.map
-                                (\u -> ( [ "username" ], string u ))
-                                c.username
-                            , Just
-                                ( [ "module" ]
-                                , node
-                                    (PathExpr
-                                        [ [ StringLiteral "." ]
-                                        , [ StringLiteral "machines" ]
-                                        , [ StringLiteral name ]
-                                        , [ StringLiteral "home-manager.nix" ]
-                                        ]
+                (Attribute
+                    (node
+                        [ node
+                            (StringName
+                                [ StringLiteral
+                                    (Maybe.withDefault "minibill" c.username ++ "@" ++ name)
+                                ]
+                            )
+                        ]
+                    )
+                    (apply
+                        (var "withConfig")
+                        [ record
+                            (List.filterMap identity
+                                [ Just
+                                    ( [ "system" ]
+                                    , string (c.arch ++ "-" ++ c.os)
                                     )
-                                )
-                            ]
-                        )
-                    ]
+                                , Maybe.map
+                                    (\u -> ( [ "username" ], string u ))
+                                    c.username
+                                , Just
+                                    ( [ "module" ]
+                                    , node
+                                        (PathExpr
+                                            [ [ StringLiteral "." ]
+                                            , [ StringLiteral "machines" ]
+                                            , [ StringLiteral name ]
+                                            , [ StringLiteral "home-manager.nix" ]
+                                            ]
+                                        )
+                                    )
+                                ]
+                            )
+                        ]
+                    )
                 )
 
         d : { arch : String, os : String, username : Maybe String }

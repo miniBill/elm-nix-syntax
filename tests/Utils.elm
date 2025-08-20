@@ -1,4 +1,4 @@
-module Utils exposing (apply, bool, checkParser, checkPathParser, checkPatternParser, dot, function, int, let_, list, node, null, parens, record, string, update, var)
+module Utils exposing (apply, attribute, bool, checkParser, checkPathParser, checkPatternParser, dot, function, int, let_, list, node, null, parens, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -9,7 +9,7 @@ import Nix.Parser
 import Nix.Parser.Extra
 import Nix.Parser.Internal
 import Nix.Parser.Problem
-import Nix.Syntax.Expression exposing (AttrPath, Expression(..), LetDeclaration(..), Name(..), Path, Pattern(..), StringElement(..))
+import Nix.Syntax.Expression exposing (AttrPath, Attribute(..), Expression(..), LetDeclaration(..), Name(..), Path, Pattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Parser.Advanced as Parser exposing ((|.), (|=))
 
@@ -20,13 +20,19 @@ record attrs =
         (RecordExpr
             (List.map
                 (\( k, v ) ->
-                    node
-                        ( key k
-                        , v
-                        )
+                    attribute k v
                 )
                 attrs
             )
+        )
+
+
+attribute : List String -> Node Expression -> Node Attribute
+attribute k v =
+    node
+        (Attribute
+            (key k)
+            v
         )
 
 

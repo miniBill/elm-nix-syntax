@@ -7,7 +7,7 @@ import Nix.Parser.Problem exposing (Problem(..))
 import Nix.Syntax.Expression
     exposing
         ( AttrPath
-        , Attribute
+        , Attribute(..)
         , Expression(..)
         , LetDeclaration(..)
         , Name(..)
@@ -184,12 +184,12 @@ expression_1_attributeSelection =
                     |= node identifier
                 )
             |> andThen
-                (\( atom, identifiers ) ->
-                    if List.isEmpty identifiers then
+                (\( atom, attrs ) ->
+                    if List.isEmpty attrs then
                         succeed (Node.value atom)
 
                     else
-                        succeed (AttributeSelectionExpr atom identifiers)
+                        succeed (AttributeSelectionExpr atom attrs)
                             |. spaces
                             |= oneOf
                                 [ succeed Just
@@ -352,18 +352,6 @@ letIn =
 
 letDeclaration : Parser (Node LetDeclaration)
 letDeclaration =
-    let
-        identifiers : Parser (List (Node String))
-        identifiers =
-            sequence
-                { item = node identifier
-                , separator = token ""
-                , spaces = spaces
-                , trailing = Parser.Optional
-                , start = token ""
-                , end = token ""
-                }
-    in
     node
         (oneOf
             [ succeed LetDeclaration
@@ -394,6 +382,18 @@ letDeclaration =
             ]
         )
         |. spaces
+
+
+identifiers : Parser (List (Node String))
+identifiers =
+    sequence
+        { item = node identifier
+        , separator = token ""
+        , spaces = spaces
+        , trailing = Parser.Optional
+        , start = token ""
+        , end = token ""
+        }
 
 
 function : Parser Expression
@@ -726,21 +726,21 @@ stringChar kind =
                 in
                 succeed String.toList
                     |. backtrackable notEnding
-                    |= (chompIf (\c -> c /= '\\' && c /= '\n' && c /= '$')
+                    |= (chompIf (\c -> c /= '\n' && c /= '$')
                             (Expecting "String character")
                             |> getChompedString
                        )
 
             InSinglelineString ->
                 succeed String.toList
-                    |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$')
+                    |= (chompIf (\c -> c /= '"' && c /= '\n' && c /= '$')
                             (Expecting "String character")
                             |> getChompedString
                        )
 
             InPath ->
                 succeed String.toList
-                    |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$' && c /= '/' && c /= ';' && c /= '(' && c /= '(' && c /= ' ')
+                    |= (chompIf (\c -> c /= '"' && c /= '\n' && c /= '$' && c /= '/' && c /= ';' && c /= '(' && c /= '(' && c /= ' ')
                             (Expecting "String character")
                             |> getChompedString
                        )
@@ -778,14 +778,33 @@ attributeSet =
 attribute : Parser (Node Attribute)
 attribute =
     node
-        (succeed Tuple.pair
-            |= attrPath
-            |. spaces
-            |. symbol "="
-            |. spaces
-            |= lazy (\_ -> expression)
-            |. spaces
-            |. symbol ";"
+        (oneOf
+            [ succeed Attribute
+                |= attrPath
+                |. spaces
+                |. symbol "="
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. spaces
+                |. symbol ";"
+            , succeed identity
+                |. keyword "inherit"
+                |. spaces
+                |= oneOf
+                    [ succeed AttributeInheritFromSet
+                        |. symbol "("
+                        |. spaces
+                        |= node identifier
+                        |. spaces
+                        |. symbol ")"
+                        |. spaces
+                        |= identifiers
+                    , succeed AttributeInheritVariables
+                        |= identifiers
+                    ]
+                |. spaces
+                |. symbol ";"
+            ]
         )
 
 

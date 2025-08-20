@@ -1,6 +1,6 @@
 module Fake exposing (emptyRange, nodeExpression, nodePattern)
 
-import Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), LetDeclaration(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
+import Nix.Syntax.Expression exposing (AttrPath, Attribute(..), Expression(..), LetDeclaration(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location, Range)
 
@@ -127,8 +127,16 @@ identityString a =
 
 
 attribute : Attribute -> Attribute
-attribute ( k, v ) =
-    ( node attrpath k, node expression v )
+attribute attr =
+    case attr of
+        Attribute k v ->
+            Attribute (node attrpath k) (node expression v)
+
+        AttributeInheritVariables vs ->
+            AttributeInheritVariables (List.map (node identityString) vs)
+
+        AttributeInheritFromSet s vs ->
+            AttributeInheritFromSet (node identityString s) (List.map (node identityString) vs)
 
 
 attrpath : AttrPath -> AttrPath
