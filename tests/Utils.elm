@@ -1,4 +1,4 @@
-module Utils exposing (apply, attribute, bool, checkParser, checkPathParser, checkPatternParser, dot, function, int, let_, list, node, null, parens, record, string, update, var)
+module Utils exposing (apply, attribute, bool, checkParser, checkPathParser, checkPatternParser, dot, function, int, let_, list, minus, node, null, parens, plus, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -54,6 +54,16 @@ apply v cs =
 var : String -> Node Expression
 var v =
     node (VariableExpr v)
+
+
+plus : Node Expression -> Node Expression -> Node Expression
+plus l r =
+    node (OperatorApplicationExpr l (node "+") r)
+
+
+minus : Node Expression -> Node Expression -> Node Expression
+minus l r =
+    node (OperatorApplicationExpr l (node "-") r)
 
 
 update : Node Expression -> Node Expression -> Node Expression

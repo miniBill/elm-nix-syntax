@@ -17,8 +17,8 @@ import Nix.Syntax.Expression
         , StringElement(..)
         )
 import Nix.Syntax.Node as Node exposing (Node(..))
-import Nix.Syntax.Range exposing (Location)
-import Parser.Advanced as Parser exposing ((|.), (|=), Token(..), andThen, backtrackable, chompIf, chompWhile, getChompedString, inContext, lazy, map, oneOf, problem, sequence, succeed)
+import Nix.Syntax.Range exposing (Location, Range)
+import Parser.Advanced as Parser exposing ((|.), (|=), Step(..), Token(..), andThen, backtrackable, chompIf, chompWhile, getChompedString, inContext, lazy, loop, map, oneOf, problem, sequence, succeed)
 import Parser.Advanced.Workaround
 import Set exposing (Set)
 
@@ -120,9 +120,7 @@ expression_8_logicalNegation =
 
 expression_7_additionSubtraction : Parser (Node Expression)
 expression_7_additionSubtraction =
-    oneOf
-        [ expression_6_multiplicationDivision
-        ]
+    leftAssociativeOperators [ "+", "-" ] expression_6_multiplicationDivision
 
 
 expression_6_multiplicationDivision : Parser (Node Expression)
@@ -220,27 +218,57 @@ expression_0_atom =
         )
 
 
-leftAssociativeOperator : String -> Parser (Node Expression) -> Parser (Node Expression)
-leftAssociativeOperator op rightParser =
-    operator (lazy (\_ -> leftAssociativeOperator op rightParser)) op rightParser
+leftAssociativeOperators : List String -> Parser (Node Expression) -> Parser (Node Expression)
+leftAssociativeOperators ops parseItem =
+    let
+        opParser : Parser (Node String)
+        opParser =
+            oneOf
+                (List.map
+                    (\op ->
+                        node
+                            (succeed op
+                                |. symbol op
+                            )
+                    )
+                    ops
+                )
+
+        step : Node Expression -> Parser (Step (Node Expression) (Node Expression))
+        step acc =
+            oneOf
+                [ succeed
+                    (\op item ->
+                        let
+                            range : Range
+                            range =
+                                { start = (Node.range acc).start
+                                , end = (Node.range item).end
+                                }
+                        in
+                        Loop (Node range (OperatorApplicationExpr acc op item))
+                    )
+                    |. backtrackable spaces
+                    |= opParser
+                    |. spaces
+                    |= parseItem
+                , succeed (Done acc)
+                ]
+    in
+    parseItem |> andThen (\item -> loop item step)
 
 
 rightAssociativeOperator : Parser (Node Expression) -> String -> Parser (Node Expression)
 rightAssociativeOperator leftParser op =
-    operator leftParser op (lazy (\_ -> rightAssociativeOperator leftParser op))
-
-
-operator : Parser (Node Expression) -> String -> Parser (Node Expression) -> Parser (Node Expression)
-operator left op right =
     node
         (succeed (\x f -> f x)
-            |= left
+            |= leftParser
             |. spaces
             |= oneOf
                 [ succeed (\o r l -> OperatorApplicationExpr l o r)
                     |= node (succeed op |. symbol op)
                     |. spaces
-                    |= right
+                    |= lazy (\_ -> rightAssociativeOperator leftParser op)
                 , succeed Node.value
                 ]
         )
@@ -740,7 +768,7 @@ stringChar kind =
 
             InPath ->
                 succeed String.toList
-                    |= (chompIf (\c -> c /= '"' && c /= '\n' && c /= '$' && c /= '/' && c /= ';' && c /= '(' && c /= '(' && c /= ' ')
+                    |= (chompIf (\c -> c /= '"' && c /= '\n' && c /= '$' && c /= '/' && c /= ';' && c /= '(' && c /= ')' && c /= ' ')
                             (Expecting "String character")
                             |> getChompedString
                        )

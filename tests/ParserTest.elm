@@ -1,9 +1,9 @@
-module ParserTest exposing (booleansFalseTest, booleansTrueTest, commentTest, functionApplication, intTest, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
+module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, functionApplication, intTest, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
 
 import Nix.Syntax.Expression exposing (Expression(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (apply, bool, int, node, null, record, string, var)
+import Utils exposing (apply, bool, int, minus, node, null, plus, record, string, var)
 
 
 test : String -> String -> Node Expression -> Test
@@ -114,6 +114,13 @@ functionApplication =
                 [ node (VariableExpr "b") ]
             )
         )
+
+
+addition : Test
+addition =
+    test "Addition"
+        "2 + 3 - 4 + 1"
+        (plus (minus (plus (int 2) (int 3)) (int 4)) (int 1))
 
 
 lambda : Test
