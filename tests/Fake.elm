@@ -69,6 +69,9 @@ expression e =
         NullExpr ->
             NullExpr
 
+        WithExpr l r ->
+            WithExpr (nodeExpression l) (nodeExpression r)
+
 
 identityBool : Bool -> Bool
 identityBool v =

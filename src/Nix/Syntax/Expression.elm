@@ -28,6 +28,7 @@ type Expression
     | RecordExpr (List (Node Attribute))
     | ListExpr (List (Node Expression))
     | PathExpr Path
+    | WithExpr (Node Expression) (Node Expression)
 
 
 type alias Path =

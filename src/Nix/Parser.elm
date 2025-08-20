@@ -17,7 +17,7 @@ import Nix.Syntax.Expression
         )
 import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
-import Parser.Advanced as Parser exposing ((|.), (|=), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, map, oneOf, problem, sequence, succeed)
+import Parser.Advanced as Parser exposing ((|.), (|=), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, lazy, map, oneOf, problem, sequence, succeed)
 import Parser.Advanced.Workaround
 import Set exposing (Set)
 
@@ -67,10 +67,22 @@ expression =
         (oneOf
             [ node letIn
             , node function
+            , node with
             , expression_14_logicalImplication
             ]
             |. spaces
         )
+
+
+with : Parser Expression
+with =
+    succeed WithExpr
+        |. keyword "with"
+        |. spaces
+        |= lazy (\_ -> expression)
+        |. symbol ";"
+        |. spaces
+        |= lazy (\_ -> expression)
 
 
 expression_14_logicalImplication : Parser (Node Expression)
@@ -207,7 +219,7 @@ expression_1_attributeSelection =
                             |. spaces
                             |= oneOf
                                 [ succeed Just
-                                    |. keyword (token "or")
+                                    |. keyword "or"
                                     |. spaces
                                     |= lazy (\_ -> expression)
                                 , succeed Nothing
@@ -229,7 +241,7 @@ expression_0_atom =
             , map VariableExpr identifier
             , map PathExpr path
             , map BoolExpr bool
-            , succeed NullExpr |. keyword (token "null")
+            , succeed NullExpr |. keyword "null"
             ]
         )
 
@@ -238,9 +250,9 @@ bool : Parser Bool
 bool =
     oneOf
         [ succeed True
-            |. keyword (token "true")
+            |. keyword "true"
         , succeed False
-            |. keyword (token "false")
+            |. keyword "false"
         ]
 
 
@@ -332,12 +344,12 @@ parenthesizedExpression =
 letIn : Parser Expression
 letIn =
     succeed identity
-        |. keyword (token "let")
+        |. keyword "let"
         |. spaces
         |= inContext ParsingLet
             (succeed LetExpr
                 |= many letDeclaration
-                |. keyword (token "in")
+                |. keyword "in"
                 |. spaces
                 |= lazy (\_ -> expression)
             )
@@ -368,7 +380,7 @@ letDeclaration =
                 |. spaces
                 |. symbol ";"
             , succeed identity
-                |. keyword (token "inherit")
+                |. keyword "inherit"
                 |. spaces
                 |= oneOf
                     [ succeed LetInheritFromSet
@@ -863,6 +875,11 @@ innerSpaces : Parser ()
 innerSpaces =
     chompWhile
         (\c -> c == ' ' || c == '\t' || c == '\n')
+
+
+keyword : String -> Parser ()
+keyword v =
+    Parser.keyword (token v)
 
 
 symbol : String -> Parser ()
