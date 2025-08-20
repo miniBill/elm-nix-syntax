@@ -258,8 +258,8 @@ number =
         |= (succeed ()
                 |. chompIf Char.isDigit ExpectingDigit
                 |. chompWhile Char.isDigit
-                |> Parser.getChompedString
-                |> Parser.andThen
+                |> getChompedString
+                |> andThen
                     (\r ->
                         case String.toInt r of
                             Just i ->
@@ -287,7 +287,7 @@ path =
     in
     oneOf
         [ succeed (::)
-            |= Parser.oneOf
+            |= oneOf
                 [ succeed "."
                     |. symbol (token ".")
                 , succeed ".."
@@ -362,7 +362,7 @@ pattern =
     let
         inner : List (Parser Pattern)
         inner =
-            [ Parser.succeed
+            [ succeed
                 (\items ->
                     RecordPattern
                         (List.filterMap identity items)
@@ -371,7 +371,7 @@ pattern =
                 |= Parser.sequence
                     { start = token "{"
                     , item =
-                        Parser.oneOf
+                        oneOf
                             [ succeed Just
                                 |= recordFieldPattern
                             , succeed Nothing
@@ -496,10 +496,10 @@ stringChar =
             |. symbol (token "\\n")
         , succeed '\t'
             |. symbol (token "\\t")
-        , Parser.chompIf (\c -> c /= '\\' && c /= '"')
+        , chompIf (\c -> c /= '\\' && c /= '"')
             (Expecting "String character")
-            |> Parser.getChompedString
-            |> Parser.andThen
+            |> getChompedString
+            |> andThen
                 (\c ->
                     case String.toList c of
                         [ x ] ->
@@ -638,7 +638,7 @@ spaces =
 
 comment : Parser ()
 comment =
-    Parser.oneOf
+    oneOf
         [ Parser.Advanced.Workaround.lineCommentAfter (token "#")
         , Parser.Advanced.Workaround.multiCommentAfter (token "/*") (token "*/") Parser.NotNestable
         ]
@@ -646,7 +646,7 @@ comment =
 
 innerSpaces : Parser ()
 innerSpaces =
-    Parser.chompWhile
+    chompWhile
         (\c -> c == ' ' || c == '\t' || c == '\n')
 
 
