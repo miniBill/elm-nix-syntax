@@ -1,9 +1,9 @@
-module ParserTest exposing (commentTest, functionApplication, lambda, multilineStringTest, recordPattern, recordPattern2, stringTest)
+module ParserTest exposing (commentTest, functionApplication, lambda, multilineStringTest, recordPattern, recordPattern2, stringInterpolationTest, stringTest)
 
 import Nix.Syntax.Expression exposing (Expression(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (int, node, string, var)
+import Utils exposing (int, node, record, string, var)
 
 
 test : String -> String -> Node Expression -> Test
@@ -41,6 +41,26 @@ commentTest =
             0
         """
         (int 0)
+
+
+stringInterpolationTest : Test
+stringInterpolationTest =
+    test "String interpolation"
+        "\"hello ${ { a = \"world\"; }.a }\""
+        (node
+            (StringExpr
+                [ StringLiteral "hello "
+                , StringInterpolation
+                    (node
+                        (AttributeSelectionExpr
+                            (record [ ( [ "a" ], string "world" ) ])
+                            [ node "a" ]
+                            Nothing
+                        )
+                    )
+                ]
+            )
+        )
 
 
 functionApplication : Test

@@ -38,6 +38,7 @@ type Problem
     | Expecting String
     | ExpectingVariable
     | ExpectingDigit
+    | Unexpected String
     | Unimplemented String
 
 
@@ -601,6 +602,7 @@ stringElement indented =
             |. symbol (token "$${")
         , succeed StringInterpolation
             |. symbol (token "${")
+            |. spaces
             |= lazy (\_ -> expression)
             |. symbol (token "}")
         , succeed (\chars -> StringLiteral (String.fromList (List.concat chars)))
@@ -624,6 +626,20 @@ stringChar { indented } =
             |. symbol (token "\\\"")
         , succeed [ '$' ]
             |. symbol (token "\\$")
+        , succeed [ '$' ]
+            |. backtrackable (symbol (token "$"))
+            |. (succeed String.dropLeft
+                    |= Parser.getOffset
+                    |= Parser.getSource
+                    |> andThen
+                        (\cut ->
+                            if String.startsWith "{" cut then
+                                problem (Unexpected "{")
+
+                            else
+                                succeed ()
+                        )
+               )
         , succeed [ '\u{000D}' ]
             |. symbol (token "\\r")
         , succeed [ '\n' ]
@@ -631,33 +647,31 @@ stringChar { indented } =
         , succeed [ '\t' ]
             |. symbol (token "\\t")
         , if indented then
-            succeed String.toList
-                |. backtrackable
-                    (succeed Tuple.pair
+            let
+                notEnding : Parser.Parser c Problem ()
+                notEnding =
+                    succeed String.dropLeft
                         |= Parser.getOffset
                         |= Parser.getSource
                         |> andThen
-                            (\( o, s ) ->
-                                let
-                                    cut : String
-                                    cut =
-                                        String.dropLeft o s
-                                in
+                            (\cut ->
                                 if String.startsWith "''" cut then
                                     problem (Expecting "char")
 
                                 else
                                     succeed ()
                             )
-                    )
-                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n')
+            in
+            succeed String.toList
+                |. backtrackable notEnding
+                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$')
                         (Expecting "String character")
                         |> getChompedString
                    )
 
           else
             succeed String.toList
-                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n')
+                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$')
                         (Expecting "String character")
                         |> getChompedString
                    )
@@ -865,6 +879,9 @@ deadEndToString lines ( head, tail ) =
 
                                     Unimplemented _ ->
                                         Nothing
+
+                                    Unexpected _ ->
+                                        Nothing
                             )
 
                 other : List String
@@ -886,6 +903,9 @@ deadEndToString lines ( head, tail ) =
                                         Just (problemToString problem)
 
                                     Unimplemented _ ->
+                                        Just (problemToString problem)
+
+                                    Unexpected _ ->
                                         Just (problemToString problem)
                             )
 
@@ -1032,3 +1052,6 @@ problemToString p =
 
         Unimplemented s ->
             "unimplemented: " ++ s
+
+        Unexpected s ->
+            "unexpected " ++ s
