@@ -11,6 +11,7 @@ type
     | VariableExpr String
       -- | IfBlock (Node Expression) (Node Expression) (Node Expression)
       -- | PrefixOperator String
+    | BoolExpr Bool
     | IntExpr Int
       -- | Hex Int
     | FloatExpr Float

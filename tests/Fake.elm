@@ -63,6 +63,14 @@ expression e =
         FloatExpr f ->
             FloatExpr (identityNumber f)
 
+        BoolExpr b ->
+            BoolExpr (identityBool b)
+
+
+identityBool : Bool -> Bool
+identityBool v =
+    v
+
 
 identityNumber : number -> number
 identityNumber n =

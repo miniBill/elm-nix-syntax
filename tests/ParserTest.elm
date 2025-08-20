@@ -1,9 +1,9 @@
-module ParserTest exposing (commentTest, functionApplication, lambda, multilineStringTest, recordPattern, recordPattern2, stringInterpolationTest, stringTest)
+module ParserTest exposing (booleansFalseTest, booleansTrueTest, commentTest, functionApplication, lambda, multilineStringTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
 
 import Nix.Syntax.Expression exposing (Expression(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (int, node, record, string, var)
+import Utils exposing (apply, bool, int, node, record, string, var)
 
 
 test : String -> String -> Node Expression -> Test
@@ -61,6 +61,33 @@ stringInterpolationTest =
                 ]
             )
         )
+
+
+stringInterpolationTest2 : Test
+stringInterpolationTest2 =
+    test "String interpolation #2"
+        "\"1 2 ${toString 3}\""
+        (node
+            (StringExpr
+                [ StringLiteral "1 2 "
+                , StringInterpolation (apply (var "toString") [ int 3 ])
+                ]
+            )
+        )
+
+
+booleansTrueTest : Test
+booleansTrueTest =
+    test "Booleans (true)"
+        "true"
+        (bool True)
+
+
+booleansFalseTest : Test
+booleansFalseTest =
+    test "Booleans (false)"
+        "false"
+        (bool False)
 
 
 functionApplication : Test

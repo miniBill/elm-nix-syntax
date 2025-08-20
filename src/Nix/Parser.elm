@@ -228,8 +228,19 @@ expression_0_atom =
             , map ParenthesizedExpr parenthesizedExpression
             , map VariableExpr identifier
             , map PathExpr path
+            , map BoolExpr bool
             ]
         )
+
+
+bool : Parser Bool
+bool =
+    oneOf
+        [ succeed True
+            |. keyword (token "true")
+        , succeed False
+            |. keyword (token "false")
+        ]
 
 
 number : Parser Expression
@@ -772,6 +783,8 @@ reserved =
         , "in"
         , "with"
         , "inherit"
+        , "true"
+        , "false"
         ]
 
 
