@@ -16,7 +16,7 @@ import Nix.Syntax.Expression
         )
 import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
-import Parser.Advanced as Parser exposing ((|.), (|=), Step(..), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, loop, map, oneOf, problem, succeed, symbol)
+import Parser.Advanced as Parser exposing ((|.), (|=), Step(..), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, map, oneOf, problem, succeed, symbol)
 import Parser.Advanced.Workaround
 import Set exposing (Set)
 
@@ -163,14 +163,14 @@ expression_3_negation =
             (succeed NegationExpr
                 |. symbol (token "-")
                 |. spaces
-                |= expression_2_applicatin
+                |= expression_2_application
             )
-        , expression_2_applicatin
+        , expression_2_application
         ]
 
 
-expression_2_applicatin : Parser (Node Expression)
-expression_2_applicatin =
+expression_2_application : Parser (Node Expression)
+expression_2_application =
     oneOf
         [ node application
             |. spaces
@@ -297,7 +297,7 @@ letDeclaration =
 function : Parser Expression
 function =
     succeed FunctionExpr
-        |= pattern
+        |= backtrackable pattern
         |. symbol (token ":")
         |= inContext ParsingFunction
             (succeed identity
@@ -308,57 +308,41 @@ function =
 
 pattern : Parser (Node Pattern)
 pattern =
-    node
-        (inContext ParsingPattern
-            (oneOf
-                [ succeed identity
-                    |. backtrackable (symbol (token "{"))
-                    |. backtrackable spaces
-                    |= Parser.oneOf
-                        [ succeed RecordPattern
-                            |= loop [] recordPatternStep
-                            |. spaces
-                            |= oneOf
-                                [ succeed { open = True }
-                                    |. symbol (token ",")
-                                    |. spaces
+    let
+        inner : List (Parser Pattern)
+        inner =
+            [ Parser.succeed
+                (\items ->
+                    RecordPattern
+                        (List.filterMap identity items)
+                        { open = List.member Nothing items }
+                )
+                |= Parser.sequence
+                    { start = token "{"
+                    , item =
+                        Parser.oneOf
+                            [ succeed Just
+                                |= recordFieldPattern
+                            , succeed Nothing
                                     |. symbol (token "...")
-                                , succeed { open = False }
-                                ]
-                            |. spaces
-                        , succeed (RecordPattern [] { open = False })
-                        ]
-                    |. backtrackable (symbol (token "}"))
+                            ]
+                    , end = token "}"
+                    , separator = token ","
+                    , spaces = spaces
+                    , trailing = Parser.Optional
+                    }
                 , succeed VarPattern
-                    |= backtrackable identifier
+                |= identifier
                 , succeed AllPattern
                     |. symbol (token "_")
                 , problem (Unimplemented "@-pattern")
                 ]
+    in
+    node
+        (inContext ParsingPattern
+            (oneOf inner)
             )
-        )
-        |. backtrackable spaces
-
-
-recordPatternStep :
-    List RecordFieldPattern
-    -> Parser (Step (List RecordFieldPattern) (List RecordFieldPattern))
-recordPatternStep revItems =
-    oneOf
-        [ succeed
-            (\item ->
-                Loop (item :: revItems)
-            )
-            |= backtrackable recordFieldPattern
-            |. backtrackable spaces
-            |. backtrackable (symbol (token ","))
-            |. backtrackable spaces
-        , succeed ()
-            |> map
-                (\_ ->
-                    Done (List.reverse revItems)
-                )
-        ]
+        |. spaces
 
 
 recordFieldPattern : Parser RecordFieldPattern
