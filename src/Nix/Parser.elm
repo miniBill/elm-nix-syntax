@@ -584,7 +584,10 @@ spaces =
 
 comment : Parser ()
 comment =
-    Parser.Advanced.Workaround.lineCommentAfter (token "#")
+    Parser.oneOf
+        [ Parser.Advanced.Workaround.lineCommentAfter (token "#")
+        , Parser.Advanced.Workaround.multiCommentAfter (token "/*") (token "*/") Parser.NotNestable
+        ]
 
 
 innerSpaces : Parser ()
