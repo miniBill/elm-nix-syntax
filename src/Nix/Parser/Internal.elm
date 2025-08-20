@@ -108,7 +108,13 @@ expression_9_update =
 expression_8_logicalNegation : Parser (Node Expression)
 expression_8_logicalNegation =
     oneOf
-        [ expression_7_additionSubtraction
+        [ node
+            (succeed NegationExpr
+                |. symbol "!"
+                |. spaces
+                |= expression_7_additionSubtraction
+            )
+        , expression_7_additionSubtraction
         ]
 
 
