@@ -16,7 +16,7 @@ import Nix.Syntax.Expression
         )
 import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
-import Parser.Advanced as Parser exposing ((|.), (|=), Step(..), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, map, oneOf, problem, succeed, symbol)
+import Parser.Advanced as Parser exposing ((|.), (|=), Token, andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, map, oneOf, problem, succeed, symbol)
 import Parser.Advanced.Workaround
 import Set exposing (Set)
 
@@ -189,33 +189,31 @@ application =
 expression_1_attributeSelection : Parser (Node Expression)
 expression_1_attributeSelection =
     node
-        (oneOf
-            [ succeed Tuple.pair
-                |= expression_0_atom
-                |= many
-                    (succeed identity
-                        |. symbol (token ".")
-                        |= node identifier
-                    )
-                |> andThen
-                    (\( atom, identifiers ) ->
-                        if List.isEmpty identifiers then
-                            succeed (Node.value atom)
+        (succeed Tuple.pair
+            |= expression_0_atom
+            |= many
+                (succeed identity
+                    |. symbol (token ".")
+                    |= node identifier
+                )
+            |> andThen
+                (\( atom, identifiers ) ->
+                    if List.isEmpty identifiers then
+                        succeed (Node.value atom)
 
-                        else
-                            succeed (AttributeSelectionExpr atom identifiers)
-                                |. spaces
-                                |= oneOf
-                                    [ succeed Just
-                                        |. keyword (token "or")
-                                        |. spaces
-                                        |= lazy (\_ -> expression)
-                                    , succeed Nothing
-                                    ]
-                    )
-            ]
-            |. spaces
+                    else
+                        succeed (AttributeSelectionExpr atom identifiers)
+                            |. spaces
+                            |= oneOf
+                                [ succeed Just
+                                    |. keyword (token "or")
+                                    |. spaces
+                                    |= lazy (\_ -> expression)
+                                , succeed Nothing
+                                ]
+                )
         )
+        |. spaces
 
 
 expression_0_atom : Parser (Node Expression)
@@ -304,6 +302,7 @@ path =
                             |. chompWhile valid
                         )
                 )
+        , problem (Unimplemented "<> paths")
         ]
 
 
@@ -666,13 +665,6 @@ errorToString src deadEnds =
 deadEndToString : List ( Int, String ) -> ( DeadEnd, List DeadEnd ) -> String
 deadEndToString lines ( head, tail ) =
     let
-        line : ( Int, String )
-        line =
-            lines
-                |> List.drop (head.row - 1)
-                |> List.head
-                |> Maybe.withDefault ( head.row, "" )
-
         grouped :
             List
                 ( List { row : Int, col : Int, context : Context }
@@ -690,41 +682,7 @@ deadEndToString lines ( head, tail ) =
 
         sourceFragment : List String
         sourceFragment =
-            let
-                before =
-                    lines
-                        |> List.drop (head.row - 3)
-                        |> List.take 3
-                        |> List.Extra.takeWhile (\( i, _ ) -> i < head.row)
-
-                after =
-                    lines
-                        |> List.drop head.row
-                        |> List.take 3
-
-                formatLine : ( Int, String ) -> String
-                formatLine ( row, l ) =
-                    String.padLeft numLength ' ' (String.fromInt row)
-                        ++ "| "
-                        ++ l
-
-                numLength : Int
-                numLength =
-                    after
-                        |> List.Extra.last
-                        |> Maybe.map (\( r, _ ) -> r)
-                        |> Maybe.withDefault head.row
-                        |> String.fromInt
-                        |> String.length
-
-                caret =
-                    String.repeat (numLength + head.col + 1) " "
-                        ++ Ansi.Color.fontColor Ansi.Color.red "^"
-            in
-            List.map formatLine before
-                ++ formatLine line
-                :: caret
-                :: List.map formatLine after
+            formatSourceFragment head lines
 
         groupToString :
             ( List { row : Int, col : Int, context : Context }
@@ -774,6 +732,7 @@ deadEndToString lines ( head, tail ) =
                                 ++ "'"
                             ]
 
+                problemsString : String
                 problemsString =
                     (groupedExpected ++ other)
                         |> List.sort
@@ -789,6 +748,55 @@ deadEndToString lines ( head, tail ) =
     in
     (sourceFragment ++ "" :: List.concatMap groupToString grouped)
         |> String.join "\n"
+
+
+formatSourceFragment : DeadEnd -> List ( Int, String ) -> List String
+formatSourceFragment head lines =
+    let
+        line : ( Int, String )
+        line =
+            lines
+                |> List.drop (head.row - 1)
+                |> List.head
+                |> Maybe.withDefault ( head.row, "" )
+
+        before : List ( Int, String )
+        before =
+            lines
+                |> List.drop (head.row - 3)
+                |> List.take 3
+                |> List.Extra.takeWhile (\( i, _ ) -> i < head.row)
+
+        after : List ( Int, String )
+        after =
+            lines
+                |> List.drop head.row
+                |> List.take 3
+
+        formatLine : ( Int, String ) -> String
+        formatLine ( row, l ) =
+            String.padLeft numLength ' ' (String.fromInt row)
+                ++ "| "
+                ++ l
+
+        numLength : Int
+        numLength =
+            after
+                |> List.Extra.last
+                |> Maybe.map (\( r, _ ) -> r)
+                |> Maybe.withDefault head.row
+                |> String.fromInt
+                |> String.length
+
+        caret : String
+        caret =
+            String.repeat (numLength + head.col + 1) " "
+                ++ Ansi.Color.fontColor Ansi.Color.red "^"
+    in
+    List.map formatLine before
+        ++ formatLine line
+        :: caret
+        :: List.map formatLine after
 
 
 contextStackToString : List { row : Int, col : Int, context : Context } -> String

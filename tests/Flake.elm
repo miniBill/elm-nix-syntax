@@ -1,7 +1,7 @@
 module Flake exposing (suite)
 
 import Nix.Syntax.Expression exposing (Attribute, Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
-import Nix.Syntax.Node exposing (Node(..))
+import Nix.Syntax.Node exposing (Node)
 import Test exposing (Test)
 import Utils exposing (apply, dot, function, let_, list, node, parens, record, string, update, var)
 

@@ -1,4 +1,4 @@
-module Utils exposing (apply, checkParser, checkPatternParser, dot, function, key, let_, list, node, parens, record, string, update, var)
+module Utils exposing (apply, checkParser, checkPatternParser, dot, function, let_, list, node, parens, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -133,6 +133,7 @@ toStringish v =
         |> List.foldl
             (\e ( a, ai ) ->
                 let
+                    nai : Float
                     nai =
                         if String.contains "Node [" e || String.contains "Node (" e then
                             ai + 0.25
