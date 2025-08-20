@@ -36,7 +36,7 @@ expression e =
         AttributeSelectionExpr v a d ->
             AttributeSelectionExpr
                 (nodeExpression v)
-                (List.map (node identityString) a)
+                (List.map (node name) a)
                 (Maybe.map nodeExpression d)
 
         FunctionExpr p c ->
@@ -71,6 +71,9 @@ expression e =
 
         OperatorApplicationExpr l op r ->
             OperatorApplicationExpr (nodeExpression l) (node identityString op) (nodeExpression r)
+
+        LookupPathExpr c ->
+            LookupPathExpr (List.map identityString c)
 
 
 identityBool : Bool -> Bool
@@ -152,6 +155,9 @@ name v =
 
         StringName es ->
             StringName (List.map stringElement es)
+
+        InterpolationName e ->
+            InterpolationName (nodeExpression e)
 
 
 stringElement : StringElement -> StringElement

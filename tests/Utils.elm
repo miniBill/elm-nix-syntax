@@ -78,7 +78,7 @@ parens v =
 
 dot : Node Expression -> List String -> Node Expression
 dot e k =
-    node (AttributeSelectionExpr e (List.map node k) Nothing)
+    node (AttributeSelectionExpr e (List.map (\n -> node (IdentifierName n)) k) Nothing)
 
 
 let_ :

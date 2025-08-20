@@ -179,7 +179,7 @@ expression_1_attributeSelection =
             |= many
                 (succeed identity
                     |. symbol "."
-                    |= node identifier
+                    |= name
                 )
             |> andThen
                 (\( atom, attrs ) ->
@@ -212,10 +212,23 @@ expression_0_atom =
             , map ParenthesizedExpr parenthesizedExpression
             , map VariableExpr identifier
             , map PathExpr path
+            , map LookupPathExpr lookupPath
             , map BoolExpr bool
             , succeed NullExpr |. keyword "null"
             ]
         )
+
+
+lookupPath : Parser (List String)
+lookupPath =
+    sequence
+        { start = token "<"
+        , end = token ">"
+        , separator = token "/"
+        , spaces = succeed ()
+        , trailing = Parser.Forbidden
+        , item = identifier
+        }
 
 
 leftAssociativeOperators : List String -> Parser (Node Expression) -> Parser (Node Expression)
@@ -856,6 +869,12 @@ name =
         (oneOf
             [ succeed StringName
                 |= string
+            , succeed InterpolationName
+                |. symbol "${"
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. spaces
+                |. symbol "}"
             , succeed IdentifierName
                 |= identifier
             ]

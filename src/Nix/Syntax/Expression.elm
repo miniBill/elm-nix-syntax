@@ -27,12 +27,13 @@ type Expression
     | ParenthesizedExpr (Node Expression)
     | LetExpr (List (Node LetDeclaration)) (Node Expression)
       -- | CaseExpression CaseBlock
-    | AttributeSelectionExpr (Node Expression) (List (Node String)) (Maybe (Node Expression))
+    | AttributeSelectionExpr (Node Expression) (List (Node Name)) (Maybe (Node Expression))
       -- | RecordAccessFunction String
     | FunctionExpr (Node Pattern) (Node Expression)
     | RecordExpr (List (Node Attribute))
     | ListExpr (List (Node Expression))
     | PathExpr Path
+    | LookupPathExpr (List String)
     | WithExpr (Node Expression) (Node Expression)
 
 
@@ -63,6 +64,7 @@ type StringElement
 
 type Name
     = StringName (List StringElement)
+    | InterpolationName (Node Expression)
     | IdentifierName String
 
 
