@@ -1,4 +1,4 @@
-module Utils exposing (apply, bool, checkParser, checkPatternParser, dot, function, int, let_, list, node, null, parens, record, string, update, var)
+module Utils exposing (apply, bool, checkParser, checkPathParser, checkPatternParser, dot, function, int, let_, list, node, null, parens, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -6,9 +6,12 @@ import Diff.ToString
 import Expect
 import Fake
 import Nix.Parser
-import Nix.Syntax.Expression exposing (AttrPath, Expression(..), LetDeclaration(..), Name(..), Pattern(..), StringElement(..))
+import Nix.Parser.Extra
+import Nix.Parser.Internal
+import Nix.Parser.Problem
+import Nix.Syntax.Expression exposing (AttrPath, Expression(..), LetDeclaration(..), Name(..), Path, Pattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
-import Parser.Advanced as Parser
+import Parser.Advanced as Parser exposing ((|.), (|=))
 
 
 record : List ( List String, Node Expression ) -> Node Expression
@@ -120,7 +123,29 @@ checkParser input value =
                 |> expectEqualMultiline (toStringish value)
 
         Err e ->
-            Expect.fail (Nix.Parser.errorToString input e)
+            Expect.fail (Nix.Parser.Extra.errorToString input e)
+
+
+checkPathParser :
+    String
+    -> Path
+    -> Expect.Expectation
+checkPathParser input value =
+    case
+        Parser.run
+            (Parser.succeed identity
+                |= Nix.Parser.Internal.path
+                |. Parser.end Nix.Parser.Problem.ExpectingEnd
+            )
+            input
+    of
+        Ok parsed ->
+            parsed
+                |> toStringish
+                |> expectEqualMultiline (toStringish value)
+
+        Err e ->
+            Expect.fail (Nix.Parser.Extra.errorToString input e)
 
 
 checkPatternParser :
@@ -128,7 +153,14 @@ checkPatternParser :
     -> Node Pattern
     -> Expect.Expectation
 checkPatternParser input value =
-    case Parser.run Nix.Parser.pattern input of
+    case
+        Parser.run
+            (Parser.succeed identity
+                |= Nix.Parser.Internal.pattern
+                |. Parser.end Nix.Parser.Problem.ExpectingEnd
+            )
+            input
+    of
         Ok parsed ->
             parsed
                 |> Fake.nodePattern
@@ -136,7 +168,7 @@ checkPatternParser input value =
                 |> expectEqualMultiline (toStringish value)
 
         Err e ->
-            Expect.fail (Nix.Parser.errorToString input e)
+            Expect.fail (Nix.Parser.Extra.errorToString input e)
 
 
 toStringish : a -> String

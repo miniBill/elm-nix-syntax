@@ -1,0 +1,881 @@
+module Nix.Parser.Internal exposing (DeadEnd, Parser, expression, path, pattern, spaces)
+
+import List.Extra
+import Maybe.Extra
+import Nix.Parser.Context exposing (Context(..))
+import Nix.Parser.Problem exposing (Problem(..))
+import Nix.Syntax.Expression
+    exposing
+        ( AttrPath
+        , Attribute
+        , Expression(..)
+        , LetDeclaration(..)
+        , Name(..)
+        , Path
+        , Pattern(..)
+        , RecordFieldPattern(..)
+        , StringElement(..)
+        )
+import Nix.Syntax.Node as Node exposing (Node(..))
+import Nix.Syntax.Range exposing (Location)
+import Parser.Advanced as Parser exposing ((|.), (|=), Token(..), andThen, backtrackable, chompIf, chompWhile, getChompedString, inContext, lazy, map, oneOf, problem, sequence, succeed)
+import Parser.Advanced.Workaround
+import Set exposing (Set)
+
+
+type alias Parser a =
+    Parser.Parser Context Problem a
+
+
+type alias DeadEnd =
+    Parser.DeadEnd Context Problem
+
+
+expression : Parser (Node Expression)
+expression =
+    inContext ParsingExpression
+        (oneOf
+            [ node letIn
+            , node function
+            , node with
+            , expression_14_logicalImplication
+            ]
+            |. spaces
+        )
+
+
+with : Parser Expression
+with =
+    succeed WithExpr
+        |. keyword "with"
+        |. spaces
+        |= lazy (\_ -> expression)
+        |. symbol ";"
+        |. spaces
+        |= lazy (\_ -> expression)
+
+
+expression_14_logicalImplication : Parser (Node Expression)
+expression_14_logicalImplication =
+    oneOf
+        [ expression_13_logicalDisjunction
+        ]
+
+
+expression_13_logicalDisjunction : Parser (Node Expression)
+expression_13_logicalDisjunction =
+    oneOf
+        [ expression_12_logicalConjunction
+        ]
+
+
+expression_12_logicalConjunction : Parser (Node Expression)
+expression_12_logicalConjunction =
+    oneOf
+        [ expression_11_equality
+        ]
+
+
+expression_11_equality : Parser (Node Expression)
+expression_11_equality =
+    oneOf
+        [ expression_10_comparison
+        ]
+
+
+expression_10_comparison : Parser (Node Expression)
+expression_10_comparison =
+    oneOf
+        [ expression_9_update ]
+
+
+expression_9_update : Parser (Node Expression)
+expression_9_update =
+    node
+        (succeed (\x f -> f x)
+            |= expression_8_logicalNegation
+            |. spaces
+            |= oneOf
+                [ succeed (\o r l -> OperatorApplicationExpr l o r)
+                    |= node (succeed "//" |. symbol "//")
+                    |. spaces
+                    |= lazy (\_ -> expression_9_update)
+                , succeed Node.value
+                ]
+        )
+
+
+expression_8_logicalNegation : Parser (Node Expression)
+expression_8_logicalNegation =
+    oneOf
+        [ expression_7_additionSubtraction
+        ]
+
+
+expression_7_additionSubtraction : Parser (Node Expression)
+expression_7_additionSubtraction =
+    oneOf
+        [ expression_6_multiplicationDivision
+        ]
+
+
+expression_6_multiplicationDivision : Parser (Node Expression)
+expression_6_multiplicationDivision =
+    oneOf
+        [ expression_5_concatenation
+        ]
+
+
+expression_5_concatenation : Parser (Node Expression)
+expression_5_concatenation =
+    rightAssociativeOperator expression_4_hasAttribute "++"
+
+
+expression_4_hasAttribute : Parser (Node Expression)
+expression_4_hasAttribute =
+    oneOf
+        [ expression_3_negation
+        ]
+
+
+expression_3_negation : Parser (Node Expression)
+expression_3_negation =
+    oneOf
+        [ node
+            (succeed NegationExpr
+                |. symbol "-"
+                |. spaces
+                |= expression_2_application
+            )
+        , expression_2_application
+        ]
+
+
+expression_2_application : Parser (Node Expression)
+expression_2_application =
+    oneOf
+        [ node application
+            |. spaces
+        , expression_1_attributeSelection
+        ]
+
+
+application : Parser Expression
+application =
+    succeed (\head tail -> ApplicationExpr head tail)
+        |= backtrackable expression_1_attributeSelection
+        |= inContext ParsingApplication (some expression_1_attributeSelection)
+
+
+expression_1_attributeSelection : Parser (Node Expression)
+expression_1_attributeSelection =
+    node
+        (succeed Tuple.pair
+            |= expression_0_atom
+            |= many
+                (succeed identity
+                    |. symbol "."
+                    |= node identifier
+                )
+            |> andThen
+                (\( atom, identifiers ) ->
+                    if List.isEmpty identifiers then
+                        succeed (Node.value atom)
+
+                    else
+                        succeed (AttributeSelectionExpr atom identifiers)
+                            |. spaces
+                            |= oneOf
+                                [ succeed Just
+                                    |. keyword "or"
+                                    |. spaces
+                                    |= lazy (\_ -> expression)
+                                , succeed Nothing
+                                ]
+                )
+        )
+        |. spaces
+
+
+expression_0_atom : Parser (Node Expression)
+expression_0_atom =
+    node
+        (oneOf
+            [ map StringExpr string
+            , number
+            , map RecordExpr attributeSet
+            , map ListExpr list
+            , map ParenthesizedExpr parenthesizedExpression
+            , map VariableExpr identifier
+            , map PathExpr path
+            , map BoolExpr bool
+            , succeed NullExpr |. keyword "null"
+            ]
+        )
+
+
+leftAssociativeOperator : String -> Parser (Node Expression) -> Parser (Node Expression)
+leftAssociativeOperator op rightParser =
+    operator (lazy (\_ -> leftAssociativeOperator op rightParser)) op rightParser
+
+
+rightAssociativeOperator : Parser (Node Expression) -> String -> Parser (Node Expression)
+rightAssociativeOperator leftParser op =
+    operator leftParser op (lazy (\_ -> rightAssociativeOperator leftParser op))
+
+
+operator : Parser (Node Expression) -> String -> Parser (Node Expression) -> Parser (Node Expression)
+operator left op right =
+    node
+        (succeed (\x f -> f x)
+            |= left
+            |. spaces
+            |= oneOf
+                [ succeed (\o r l -> OperatorApplicationExpr l o r)
+                    |= node (succeed op |. symbol op)
+                    |. spaces
+                    |= right
+                , succeed Node.value
+                ]
+        )
+
+
+bool : Parser Bool
+bool =
+    oneOf
+        [ succeed True
+            |. keyword "true"
+        , succeed False
+            |. keyword "false"
+        ]
+
+
+number : Parser Expression
+number =
+    succeed
+        (\n b a ->
+            case a of
+                Nothing ->
+                    if n then
+                        IntExpr -b
+
+                    else
+                        IntExpr b
+
+                Just ae ->
+                    if n then
+                        FloatExpr -(toFloat b + ae)
+
+                    else
+                        FloatExpr (toFloat b + ae)
+        )
+        |= oneOf
+            [ succeed True
+                |. backtrackable (symbol "-")
+            , succeed False
+            ]
+        |= (succeed ()
+                |. chompIf Char.isDigit ExpectingDigit
+                |. chompWhile Char.isDigit
+                |> getChompedString
+                |> andThen
+                    (\r ->
+                        case String.toInt r of
+                            Just i ->
+                                succeed i
+
+                            Nothing ->
+                                -- This shouldn't happen
+                                problem (Expecting "A valid integer")
+                    )
+           )
+        |= oneOf
+            [ succeed Just
+                |. symbol "."
+                |= problem (Unimplemented "Float")
+            , succeed Nothing
+            ]
+
+
+path : Parser Path
+path =
+    let
+        valid : Char -> Bool
+        valid c =
+            c /= ' ' && c /= '/' && c /= ';'
+    in
+    oneOf
+        [ succeed (::)
+            |= oneOf
+                [ succeed "."
+                    |. symbol "."
+                , succeed ".."
+                    |. symbol ".."
+                ]
+            |= many
+                (succeed identity
+                    |. symbol "/"
+                    |= getChompedString
+                        (succeed ()
+                            |. chompIf valid (Expecting "path piece")
+                            |. chompWhile valid
+                        )
+                )
+        , problem (Unimplemented "<> paths")
+        ]
+
+
+parenthesizedExpression : Parser (Node Expression)
+parenthesizedExpression =
+    succeed identity
+        |. symbol "("
+        |. spaces
+        |= lazy (\_ -> expression)
+        |. spaces
+        |. symbol ")"
+
+
+letIn : Parser Expression
+letIn =
+    succeed identity
+        |. keyword "let"
+        |. spaces
+        |= inContext ParsingLet
+            (succeed LetExpr
+                |= many letDeclaration
+                |. keyword "in"
+                |. spaces
+                |= lazy (\_ -> expression)
+            )
+
+
+letDeclaration : Parser (Node LetDeclaration)
+letDeclaration =
+    let
+        identifiers : Parser (List (Node String))
+        identifiers =
+            sequence
+                { item = node identifier
+                , separator = token ""
+                , spaces = spaces
+                , trailing = Parser.Optional
+                , start = token ""
+                , end = token ""
+                }
+    in
+    node
+        (oneOf
+            [ succeed LetDeclaration
+                |= node identifier
+                |. spaces
+                |. symbol "="
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. spaces
+                |. symbol ";"
+            , succeed identity
+                |. keyword "inherit"
+                |. spaces
+                |= oneOf
+                    [ succeed LetInheritFromSet
+                        |. symbol "("
+                        |. spaces
+                        |= node identifier
+                        |. spaces
+                        |. symbol ")"
+                        |. spaces
+                        |= identifiers
+                    , succeed LetInheritVariables
+                        |= identifiers
+                    ]
+                |. spaces
+                |. symbol ";"
+            ]
+        )
+        |. spaces
+
+
+function : Parser Expression
+function =
+    succeed FunctionExpr
+        |= backtrackable pattern
+        |. symbol ":"
+        |= inContext ParsingFunction
+            (succeed identity
+                |. spaces
+                |= lazy (\_ -> expression)
+            )
+
+
+pattern : Parser (Node Pattern)
+pattern =
+    let
+        inner : List (Parser Pattern)
+        inner =
+            [ succeed
+                (\items ->
+                    RecordPattern
+                        (List.filterMap identity items)
+                        { open = List.member Nothing items }
+                )
+                |= sequence
+                    { start = token "{"
+                    , item =
+                        oneOf
+                            [ succeed Just
+                                |= recordFieldPattern
+                            , succeed Nothing
+                                |. symbol "..."
+                            ]
+                    , end = token "}"
+                    , separator = token ","
+                    , spaces = spaces
+                    , trailing = Parser.Optional
+                    }
+            , succeed VarPattern
+                |= identifier
+            , succeed AllPattern
+                |. symbol "_"
+            , succeed ParenthesizedPattern
+                |. symbol "("
+                |. spaces
+                |= lazy (\_ -> pattern)
+                |. symbol ")"
+            , problem (Unimplemented "@-pattern")
+            ]
+    in
+    node
+        (inContext ParsingPattern
+            (oneOf inner)
+        )
+        |. spaces
+
+
+recordFieldPattern : Parser RecordFieldPattern
+recordFieldPattern =
+    succeed RecordFieldPattern
+        |= node identifier
+        |. spaces
+        |= oneOf
+            [ succeed Just
+                |. symbol "?"
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. spaces
+            , succeed Nothing
+            ]
+
+
+string : Parser (List StringElement)
+string =
+    oneOf
+        [ succeed identity
+            |. symbol "\""
+            |= inContext ParsingString
+                (succeed identity
+                    |= many (stringElement { indented = False })
+                    |. symbol "\""
+                )
+        , succeed identity
+            |= indentedString
+        , succeed identity
+            |= problem (Unimplemented "uri")
+        ]
+
+
+indentedString : Parser (List StringElement)
+indentedString =
+    succeed cleanIndentation
+        |. symbol "''"
+        |= inContext ParsingString
+            (sequence
+                { start = token ""
+                , end = token "''"
+                , trailing = Parser.Optional
+                , separator = Token "\n" (Expecting "\\n")
+                , item = many (stringElement { indented = True })
+                , spaces = succeed ()
+                }
+            )
+
+
+cleanIndentation : List (List StringElement) -> List StringElement
+cleanIndentation lines =
+    let
+        withoutFirst : List (List StringElement)
+        withoutFirst =
+            case lines of
+                [] :: tail ->
+                    tail
+
+                _ ->
+                    lines
+
+        withoutLast : List (List StringElement)
+        withoutLast =
+            case List.reverse withoutFirst of
+                [] :: init ->
+                    List.reverse init
+
+                [ StringLiteral s ] :: init ->
+                    if String.isEmpty (String.trim s) then
+                        List.reverse init
+
+                    else
+                        withoutFirst
+
+                _ ->
+                    withoutFirst
+
+        commonIndentation : Int
+        commonIndentation =
+            withoutLast
+                |> List.map findIndentation
+                |> List.minimum
+                |> Maybe.withDefault 0
+
+        unindent : List StringElement -> Maybe (List StringElement)
+        unindent line =
+            case line of
+                (StringLiteral s) :: tail ->
+                    Just (StringLiteral (String.dropLeft commonIndentation s) :: tail)
+
+                _ ->
+                    -- Something has gone wrong
+                    Nothing
+
+        unindented : List (List StringElement)
+        unindented =
+            if commonIndentation > 0 then
+                Maybe.Extra.combineMap unindent withoutLast
+                    |> Maybe.withDefault withoutLast
+
+            else
+                withoutLast
+    in
+    unindented
+        |> List.Extra.intercalate [ StringLiteral "\n" ]
+        |> simplifyString
+
+
+findIndentation : List StringElement -> Int
+findIndentation elements =
+    case elements of
+        (StringLiteral s) :: _ ->
+            s |> String.toList |> countWhileSpace
+
+        _ ->
+            0
+
+
+countWhileSpace : List Char -> Int
+countWhileSpace c =
+    let
+        go : Int -> List Char -> Int
+        go acc q =
+            case q of
+                ' ' :: tail ->
+                    go (acc + 1) tail
+
+                _ ->
+                    acc
+    in
+    go 0 c
+
+
+simplifyString : List StringElement -> List StringElement
+simplifyString elements =
+    let
+        ( last, acc ) =
+            List.foldl
+                (\e ( l, a ) ->
+                    case e of
+                        StringInterpolation _ ->
+                            case l of
+                                Nothing ->
+                                    ( Nothing, e :: a )
+
+                                Just s ->
+                                    ( Nothing, e :: StringLiteral s :: a )
+
+                        StringLiteral el ->
+                            case l of
+                                Nothing ->
+                                    ( Just el, a )
+
+                                Just s ->
+                                    ( Just (s ++ el), a )
+                )
+                ( Nothing, [] )
+                elements
+    in
+    case last of
+        Nothing ->
+            List.reverse acc
+
+        Just l ->
+            List.reverse (StringLiteral l :: acc)
+
+
+token : String -> Token Problem
+token t =
+    Token t (Expecting t)
+
+
+node : Parser a -> Parser (Node a)
+node inner =
+    succeed
+        (\start value end ->
+            Node
+                { start = start
+                , end = end
+                }
+                value
+        )
+        |= location
+        |= inner
+        |= location
+
+
+location : Parser Location
+location =
+    succeed
+        (\row column ->
+            { row = row
+            , column = column
+            }
+        )
+        |= Parser.getRow
+        |= Parser.getCol
+
+
+stringElement : { indented : Bool } -> Parser StringElement
+stringElement indented =
+    oneOf
+        [ succeed (StringLiteral "$${")
+            |. symbol "$${"
+        , succeed StringInterpolation
+            |. symbol "${"
+            |. spaces
+            |= lazy (\_ -> expression)
+            |. symbol "}"
+        , succeed (\chars -> StringLiteral (String.fromList (List.concat chars)))
+            |= some (stringChar indented)
+        ]
+
+
+some : Parser a -> Parser (List a)
+some inner =
+    succeed (::)
+        |= inner
+        |= many inner
+
+
+stringChar : { indented : Bool } -> Parser (List Char)
+stringChar { indented } =
+    oneOf
+        [ succeed [ '\\' ]
+            |. symbol "\\\\"
+        , succeed [ '"' ]
+            |. symbol "\\\""
+        , succeed [ '$' ]
+            |. symbol "\\$"
+        , succeed [ '$' ]
+            |. backtrackable (symbol "$")
+            |. (succeed String.dropLeft
+                    |= Parser.getOffset
+                    |= Parser.getSource
+                    |> andThen
+                        (\cut ->
+                            if String.startsWith "{" cut then
+                                problem (Unexpected "{")
+
+                            else
+                                succeed ()
+                        )
+               )
+        , succeed [ '\u{000D}' ]
+            |. symbol "\\r"
+        , succeed [ '\n' ]
+            |. symbol "\\n"
+        , succeed [ '\t' ]
+            |. symbol "\\t"
+        , if indented then
+            let
+                notEnding : Parser.Parser c Problem ()
+                notEnding =
+                    succeed String.dropLeft
+                        |= Parser.getOffset
+                        |= Parser.getSource
+                        |> andThen
+                            (\cut ->
+                                if String.startsWith "''" cut then
+                                    problem (Expecting "char")
+
+                                else
+                                    succeed ()
+                            )
+            in
+            succeed String.toList
+                |. backtrackable notEnding
+                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$')
+                        (Expecting "String character")
+                        |> getChompedString
+                   )
+
+          else
+            succeed String.toList
+                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$')
+                        (Expecting "String character")
+                        |> getChompedString
+                   )
+        ]
+
+
+many : Parser a -> Parser (List a)
+many item =
+    sequence
+        { start = token ""
+        , end = token ""
+        , spaces = succeed ()
+        , item = item
+        , trailing = Parser.Optional
+        , separator = token ""
+        }
+
+
+attributeSet : Parser (List (Node Attribute))
+attributeSet =
+    succeed identity
+        |. symbol "{"
+        |= inContext ParsingAttrset
+            (sequence
+                { start = token ""
+                , spaces = spaces
+                , end = token "}"
+                , trailing = Parser.Optional
+                , separator = token ""
+                , item = attribute
+                }
+            )
+
+
+attribute : Parser (Node Attribute)
+attribute =
+    node
+        (succeed Tuple.pair
+            |= attrPath
+            |. spaces
+            |. symbol "="
+            |. spaces
+            |= lazy (\_ -> expression)
+            |. spaces
+            |. symbol ";"
+        )
+
+
+attrPath : Parser (Node AttrPath)
+attrPath =
+    node
+        (sequence
+            { start = token ""
+            , end = token ""
+            , separator = token "."
+            , spaces = succeed ()
+            , trailing = Parser.Forbidden
+            , item = name
+            }
+        )
+
+
+name : Parser (Node Name)
+name =
+    node
+        (oneOf
+            [ succeed StringName
+                |= string
+            , succeed IdentifierName
+                |= identifier
+            ]
+        )
+
+
+identifier : Parser String
+identifier =
+    let
+        start : Char -> Bool
+        start c =
+            c == '_' || Char.isAlpha c
+
+        inner : Char -> Bool
+        inner c =
+            c == '_' || c == '\'' || c == '-' || Char.isAlphaNum c
+    in
+    Parser.variable
+        { start = start
+        , inner = inner
+        , reserved = reserved
+        , expecting = ExpectingVariable
+        }
+
+
+reserved : Set String
+reserved =
+    Set.fromList
+        [ "let"
+        , "in"
+        , "with"
+        , "inherit"
+        , "true"
+        , "false"
+        , "null"
+        ]
+
+
+list : Parser (List (Node Expression))
+list =
+    succeed identity
+        |. symbol "["
+        |= inContext ParsingList
+            (sequence
+                { start = token ""
+                , separator = token ""
+                , end = token "]"
+                , spaces = spaces
+                , trailing = Parser.Optional
+                , item = lazy (\_ -> expression_1_attributeSelection)
+                }
+            )
+
+
+spaces : Parser ()
+spaces =
+    innerSpaces
+        |. oneOf
+            [ comment |. lazy (\_ -> spaces)
+            , succeed ()
+            ]
+
+
+comment : Parser ()
+comment =
+    oneOf
+        [ Parser.Advanced.Workaround.lineCommentAfter (token "#")
+        , Parser.Advanced.Workaround.multiCommentAfter (token "/*") (token "*/") Parser.NotNestable
+        ]
+
+
+innerSpaces : Parser ()
+innerSpaces =
+    chompWhile
+        (\c -> c == ' ' || c == '\t' || c == '\n')
+
+
+keyword : String -> Parser ()
+keyword v =
+    Parser.keyword (token v)
+
+
+symbol : String -> Parser ()
+symbol v =
+    Parser.symbol (token v)

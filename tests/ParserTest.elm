@@ -1,4 +1,4 @@
-module ParserTest exposing (booleansFalseTest, booleansTrueTest, commentTest, functionApplication, intTest, lambda, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
+module ParserTest exposing (booleansFalseTest, booleansTrueTest, commentTest, functionApplication, intTest, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
 
 import Nix.Syntax.Expression exposing (Expression(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
@@ -131,6 +131,15 @@ lambda =
                 (var "lib")
             )
         )
+
+
+longPathTest : Test
+longPathTest =
+    Test.test "Long path" <|
+        \_ ->
+            Utils.checkPathParser
+                "../../programs/wally-cli.nix"
+                [ "..", "..", "programs", "wally-cli.nix" ]
 
 
 recordPattern : Test

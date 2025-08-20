@@ -1,5 +1,11 @@
 module Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), LetDeclaration(..), Name(..), Path, Pattern(..), RecordFieldPattern(..), StringElement(..))
 
+{-|
+
+@docs AttrPath, Attribute, Expression, LetDeclaration, Name, Path, Pattern, RecordFieldPattern, StringElement
+
+-}
+
 import Nix.Syntax.Node exposing (Node)
 
 

@@ -10,6 +10,7 @@ import Cli.Program
 import FatalError exposing (FatalError)
 import List.Extra
 import Nix.Parser
+import Nix.Parser.Extra
 import Pages.Script as Script exposing (Script)
 
 
@@ -59,7 +60,7 @@ tryParse file =
             let
                 msg : String
                 msg =
-                    Nix.Parser.errorToString content e
+                    Nix.Parser.Extra.errorToString content e
             in
             BackendTask.fail (FatalError.fromString msg)
 
