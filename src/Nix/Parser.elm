@@ -597,7 +597,9 @@ errorToString : String -> List DeadEnd -> String
 errorToString src deadEnds =
     let
         lines =
-            src |> String.split "\n"
+            src
+                |> String.split "\n"
+                |> List.indexedMap (\i l -> ( i + 1, l ))
     in
     deadEnds
         |> List.Extra.gatherEqualsBy
@@ -606,15 +608,15 @@ errorToString src deadEnds =
         |> String.join "\n"
 
 
-deadEndToString : List String -> ( DeadEnd, List DeadEnd ) -> String
+deadEndToString : List ( Int, String ) -> ( DeadEnd, List DeadEnd ) -> String
 deadEndToString lines ( head, tail ) =
     let
-        line : String
+        line : ( Int, String )
         line =
             lines
                 |> List.drop (head.row - 1)
                 |> List.head
-                |> Maybe.withDefault ""
+                |> Maybe.withDefault ( head.row, "" )
 
         grouped :
             List
@@ -631,26 +633,49 @@ deadEndToString lines ( head, tail ) =
                         )
                     )
 
-        sourceFragment : String
+        sourceFragment : List String
         sourceFragment =
             let
-                num : String
-                num =
-                    String.fromInt head.row
+                before =
+                    lines
+                        |> List.drop (head.row - 3)
+                        |> List.take 3
+                        |> List.Extra.takeWhile (\( i, _ ) -> i < head.row)
+
+                after =
+                    lines
+                        |> List.drop head.row
+                        |> List.take 3
+
+                formatLine : ( Int, String ) -> String
+                formatLine ( row, l ) =
+                    String.padLeft numLength ' ' (String.fromInt row)
+                        ++ "| "
+                        ++ l
+
+                numLength : Int
+                numLength =
+                    after
+                        |> List.Extra.last
+                        |> Maybe.map (\( r, _ ) -> r)
+                        |> Maybe.withDefault head.row
+                        |> String.fromInt
+                        |> String.length
+
+                caret =
+                    String.repeat (numLength + head.col + 1) " "
+                        ++ Ansi.Color.fontColor Ansi.Color.red "^"
             in
-            "\n"
-                ++ num
-                ++ "|"
-                ++ line
-                ++ "\n"
-                ++ String.repeat (String.length num + head.col) " "
-                ++ Ansi.Color.fontColor Ansi.Color.red "^"
+            List.map formatLine before
+                ++ formatLine line
+                :: caret
+                :: List.map formatLine after
 
         groupToString :
             ( List { row : Int, col : Int, context : Context }
             , List Problem
             )
-            -> String
+            -> List String
         groupToString ( contextStack, problems ) =
             let
                 expected : List String
@@ -699,14 +724,15 @@ deadEndToString lines ( head, tail ) =
                         |> List.sort
                         |> String.join "\n  "
             in
-            "- "
+            [ "- "
                 ++ Ansi.Color.fontColor
                     Ansi.Color.cyan
                     (contextStackToString contextStack)
-                ++ ":\n  "
-                ++ problemsString
+                ++ ":"
+            , "  " ++ problemsString
+            ]
     in
-    (sourceFragment :: List.map groupToString grouped)
+    (sourceFragment ++ "" :: List.concatMap groupToString grouped)
         |> String.join "\n"
 
 
