@@ -240,9 +240,12 @@ path =
     in
     oneOf
         [ succeed (::)
-            |= (succeed "."
+            |= Parser.oneOf
+                [ succeed "."
                     |. symbol (token ".")
-               )
+                , succeed ".."
+                    |. symbol (token "..")
+                ]
             |= many
                 (succeed identity
                     |. symbol (token "/")
