@@ -1,4 +1,4 @@
-module Utils exposing (apply, checkParser, checkPatternParser, dot, function, let_, list, node, parens, record, string, update, var)
+module Utils exposing (apply, checkParser, checkPatternParser, dot, function, int, let_, list, node, parens, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -85,6 +85,11 @@ key parts =
 string : String -> Node Expression
 string v =
     node (StringExpr [ StringLiteral v ])
+
+
+int : Int -> Node Expression
+int v =
+    node (IntExpr v)
 
 
 node : a -> Node a

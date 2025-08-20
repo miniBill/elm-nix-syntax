@@ -1,56 +1,75 @@
-module ParserTest exposing (functionApplication, indentedString, lambda, recordPattern, recordPattern2)
+module ParserTest exposing (commentTest, functionApplication, lambda, multilineStringTest, recordPattern, recordPattern2, stringTest)
 
 import Nix.Syntax.Expression exposing (Expression(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
+import Nix.Syntax.Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (node, string, var)
+import Utils exposing (int, node, string, var)
+
+
+test : String -> String -> Node Expression -> Test
+test label input output =
+    Test.test label <|
+        \_ ->
+            Utils.checkParser input output
+
+
+stringTest : Test
+stringTest =
+    test "String" "\"hello world\"" (string "hello world")
+
+
+multilineStringTest : Test
+multilineStringTest =
+    test "Indented string"
+        """
+            ''
+                multi
+                 line
+                  string 
+            ''
+        """
+        (node
+            (StringExpr [ StringLiteral "multi\n line\n  string " ])
+        )
+
+
+commentTest : Test
+commentTest =
+    test "Comment"
+        """
+            # Comment
+            0
+        """
+        (int 0)
 
 
 functionApplication : Test
 functionApplication =
-    Test.test "Function application" <|
-        \_ ->
-            Utils.checkParser "a b"
-                (node
-                    (ApplicationExpr
-                        (node (VariableExpr "a"))
-                        [ node (VariableExpr "b") ]
-                    )
-                )
+    test "Function application"
+        "a b"
+        (node
+            (ApplicationExpr
+                (node (VariableExpr "a"))
+                [ node (VariableExpr "b") ]
+            )
+        )
 
 
 lambda : Test
 lambda =
-    Test.test "Lambda" <|
-        \_ ->
-            Utils.checkParser "{ lib }: lib"
+    test "Lambda"
+        "{ lib }: lib"
+        (node
+            (FunctionExpr
                 (node
-                    (FunctionExpr
-                        (node
-                            (RecordPattern
-                                [ RecordFieldPattern (node "lib") Nothing ]
-                                { open = False }
-                            )
-                        )
-                        (var "lib")
+                    (RecordPattern
+                        [ RecordFieldPattern (node "lib") Nothing ]
+                        { open = False }
                     )
                 )
-
-
-indentedString : Test
-indentedString =
-    Test.test "Indented string" <|
-        \_ ->
-            Utils.checkParser
-                """
-                ''
-                    multi
-                     line
-                      string 
-                ''
-            """
-                (node
-                    (StringExpr [ StringLiteral "multi\n line\n  string " ])
-                )
+                (var "lib")
+            )
+        )
 
 
 recordPattern : Test
