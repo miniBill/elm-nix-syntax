@@ -505,7 +505,10 @@ stringChar =
                         [ x ] ->
                             succeed x
 
-                        _ ->
+                        [] ->
+                            problem UnexpectedChar
+
+                        _ :: _ :: _ ->
                             problem UnexpectedChar
                 )
         ]
@@ -700,7 +703,19 @@ deadEndToString lines ( head, tail ) =
                                     Expecting x ->
                                         Just x
 
-                                    _ ->
+                                    ExpectingEnd ->
+                                        Nothing
+
+                                    ExpectingVariable ->
+                                        Nothing
+
+                                    ExpectingDigit ->
+                                        Nothing
+
+                                    UnexpectedChar ->
+                                        Nothing
+
+                                    Unimplemented _ ->
                                         Nothing
                             )
 
@@ -713,7 +728,19 @@ deadEndToString lines ( head, tail ) =
                                     Expecting _ ->
                                         Nothing
 
-                                    _ ->
+                                    ExpectingEnd ->
+                                        Just (problemToString problem)
+
+                                    ExpectingVariable ->
+                                        Just (problemToString problem)
+
+                                    ExpectingDigit ->
+                                        Just (problemToString problem)
+
+                                    UnexpectedChar ->
+                                        Just (problemToString problem)
+
+                                    Unimplemented _ ->
                                         Just (problemToString problem)
                             )
 
@@ -726,7 +753,7 @@ deadEndToString lines ( head, tail ) =
                         [ x ] ->
                             [ "expecting '" ++ x ++ "'" ]
 
-                        _ ->
+                        _ :: _ :: _ ->
                             [ "expecting one of '"
                                 ++ String.join "' '" expected
                                 ++ "'"
