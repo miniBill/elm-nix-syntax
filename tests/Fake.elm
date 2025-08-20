@@ -57,6 +57,17 @@ expression e =
         VariableExpr v ->
             VariableExpr (identityString v)
 
+        IntExpr i ->
+            IntExpr (identityNumber i)
+
+        FloatExpr f ->
+            FloatExpr (identityNumber f)
+
+
+identityNumber : number -> number
+identityNumber n =
+    n
+
 
 letDeclaration : LetDeclaration -> LetDeclaration
 letDeclaration ( k, v ) =

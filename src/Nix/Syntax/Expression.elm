@@ -11,9 +11,9 @@ type
     | VariableExpr String
       -- | IfBlock (Node Expression) (Node Expression) (Node Expression)
       -- | PrefixOperator String
-      -- | Integer Int
+    | IntExpr Int
       -- | Hex Int
-      -- | Floatable Float
+    | FloatExpr Float
     | NegationExpr (Node Expression)
     | StringExpr (List StringElement)
       -- | CharLiteral Char

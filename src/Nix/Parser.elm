@@ -36,6 +36,7 @@ type Problem
     = ExpectingEnd
     | Expecting String
     | ExpectingVariable
+    | ExpectingDigit
     | UnexpectedChar
     | Unimplemented String
 
@@ -222,6 +223,7 @@ expression_0_atom =
     node
         (oneOf
             [ map StringExpr string
+            , number
             , map RecordExpr attributeSet
             , map ListExpr list
             , map ParenthesizedExpr parenthesizedExpression
@@ -229,6 +231,53 @@ expression_0_atom =
             , map PathExpr path
             ]
         )
+
+
+number : Parser Expression
+number =
+    succeed
+        (\n b a ->
+            case a of
+                Nothing ->
+                    if n then
+                        IntExpr -b
+
+                    else
+                        IntExpr b
+
+                Just ae ->
+                    if n then
+                        FloatExpr -(toFloat b + ae)
+
+                    else
+                        FloatExpr (toFloat b + ae)
+        )
+        |= oneOf
+            [ succeed True
+                |. backtrackable (symbol (token "-"))
+            , succeed False
+            ]
+        |= (succeed ()
+                |. chompIf Char.isDigit ExpectingDigit
+                |. chompWhile Char.isDigit
+                |> Parser.getChompedString
+                |> Parser.andThen
+                    (\r ->
+                        case String.toInt r of
+                            Just i ->
+                                succeed i
+
+                            Nothing ->
+                                -- This shouldn't happen
+                                problem (Expecting "A valid integer")
+                    )
+           )
+        |= oneOf
+            [ succeed Just
+                |. symbol (token ".")
+                |= problem (Unimplemented "Float")
+            , succeed Nothing
+            ]
 
 
 path : Parser Path
@@ -791,6 +840,9 @@ problemToString p =
     case p of
         Expecting s ->
             "expecting '" ++ s ++ "'"
+
+        ExpectingDigit ->
+            "expecting a digit 0-9"
 
         ExpectingVariable ->
             "expecting variable name"
