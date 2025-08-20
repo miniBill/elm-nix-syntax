@@ -8,7 +8,7 @@ import Nix.Syntax.Expression
         ( AttrPath
         , Attribute
         , Expression(..)
-        , LetDeclaration
+        , LetDeclaration(..)
         , Name(..)
         , Path
         , Pattern(..)
@@ -17,7 +17,7 @@ import Nix.Syntax.Expression
         )
 import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
-import Parser.Advanced as Parser exposing ((|.), (|=), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, map, oneOf, problem, sequence, succeed, symbol)
+import Parser.Advanced as Parser exposing ((|.), (|=), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, map, oneOf, problem, sequence, succeed)
 import Parser.Advanced.Workaround
 import Set exposing (Set)
 
@@ -115,7 +115,7 @@ expression_9_update =
             |. spaces
             |= oneOf
                 [ succeed (\r l -> UpdateExpr l r)
-                    |. symbol (token "//")
+                    |. symbol "//"
                     |. spaces
                     |= lazy (\_ -> expression_9_update)
                 , succeed Node.value
@@ -163,7 +163,7 @@ expression_3_negation =
     oneOf
         [ node
             (succeed NegationExpr
-                |. symbol (token "-")
+                |. symbol "-"
                 |. spaces
                 |= expression_2_application
             )
@@ -194,7 +194,7 @@ expression_1_attributeSelection =
             |= expression_0_atom
             |= many
                 (succeed identity
-                    |. symbol (token ".")
+                    |. symbol "."
                     |= node identifier
                 )
             |> andThen
@@ -265,7 +265,7 @@ number =
         )
         |= oneOf
             [ succeed True
-                |. backtrackable (symbol (token "-"))
+                |. backtrackable (symbol "-")
             , succeed False
             ]
         |= (succeed ()
@@ -285,7 +285,7 @@ number =
            )
         |= oneOf
             [ succeed Just
-                |. symbol (token ".")
+                |. symbol "."
                 |= problem (Unimplemented "Float")
             , succeed Nothing
             ]
@@ -302,13 +302,13 @@ path =
         [ succeed (::)
             |= oneOf
                 [ succeed "."
-                    |. symbol (token ".")
+                    |. symbol "."
                 , succeed ".."
-                    |. symbol (token "..")
+                    |. symbol ".."
                 ]
             |= many
                 (succeed identity
-                    |. symbol (token "/")
+                    |. symbol "/"
                     |= getChompedString
                         (succeed ()
                             |. chompIf valid (Expecting "path piece")
@@ -322,11 +322,11 @@ path =
 parenthesizedExpression : Parser (Node Expression)
 parenthesizedExpression =
     succeed identity
-        |. symbol (token "(")
+        |. symbol "("
         |. spaces
         |= lazy (\_ -> expression)
         |. spaces
-        |. symbol (token ")")
+        |. symbol ")"
 
 
 letIn : Parser Expression
@@ -345,24 +345,55 @@ letIn =
 
 letDeclaration : Parser (Node LetDeclaration)
 letDeclaration =
+    let
+        identifiers : Parser (List (Node String))
+        identifiers =
+            sequence
+                { item = node identifier
+                , separator = token ""
+                , spaces = spaces
+                , trailing = Parser.Optional
+                , start = token ""
+                , end = token ""
+                }
+    in
     node
-        (succeed Tuple.pair
-            |= node identifier
-            |. spaces
-            |. symbol (token "=")
-            |. spaces
-            |= lazy (\_ -> expression)
-            |. spaces
-            |. symbol (token ";")
-            |. spaces
+        (oneOf
+            [ succeed LetDeclaration
+                |= node identifier
+                |. spaces
+                |. symbol "="
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. spaces
+                |. symbol ";"
+            , succeed identity
+                |. keyword (token "inherit")
+                |. spaces
+                |= oneOf
+                    [ succeed LetInheritFromSet
+                        |. symbol "("
+                        |. spaces
+                        |= node identifier
+                        |. spaces
+                        |. symbol ")"
+                        |. spaces
+                        |= identifiers
+                    , succeed LetInheritVariables
+                        |= identifiers
+                    ]
+                |. spaces
+                |. symbol ";"
+            ]
         )
+        |. spaces
 
 
 function : Parser Expression
 function =
     succeed FunctionExpr
         |= backtrackable pattern
-        |. symbol (token ":")
+        |. symbol ":"
         |= inContext ParsingFunction
             (succeed identity
                 |. spaces
@@ -388,7 +419,7 @@ pattern =
                             [ succeed Just
                                 |= recordFieldPattern
                             , succeed Nothing
-                                |. symbol (token "...")
+                                |. symbol "..."
                             ]
                     , end = token "}"
                     , separator = token ","
@@ -398,7 +429,12 @@ pattern =
             , succeed VarPattern
                 |= identifier
             , succeed AllPattern
-                |. symbol (token "_")
+                |. symbol "_"
+            , succeed ParenthesizedPattern
+                |. symbol "("
+                |. spaces
+                |= lazy (\_ -> pattern)
+                |. symbol ")"
             , problem (Unimplemented "@-pattern")
             ]
     in
@@ -416,7 +452,7 @@ recordFieldPattern =
         |. spaces
         |= oneOf
             [ succeed Just
-                |. symbol (token "?")
+                |. symbol "?"
                 |. spaces
                 |= lazy (\_ -> expression)
                 |. spaces
@@ -428,11 +464,11 @@ string : Parser (List StringElement)
 string =
     oneOf
         [ succeed identity
-            |. symbol (token "\"")
+            |. symbol "\""
             |= inContext ParsingString
                 (succeed identity
                     |= many (stringElement { indented = False })
-                    |. symbol (token "\"")
+                    |. symbol "\""
                 )
         , succeed identity
             |= indentedString
@@ -444,7 +480,7 @@ string =
 indentedString : Parser (List StringElement)
 indentedString =
     succeed cleanIndentation
-        |. symbol (token "''")
+        |. symbol "''"
         |= inContext ParsingString
             (sequence
                 { start = token ""
@@ -611,12 +647,12 @@ stringElement : { indented : Bool } -> Parser StringElement
 stringElement indented =
     oneOf
         [ succeed (StringLiteral "$${")
-            |. symbol (token "$${")
+            |. symbol "$${"
         , succeed StringInterpolation
-            |. symbol (token "${")
+            |. symbol "${"
             |. spaces
             |= lazy (\_ -> expression)
-            |. symbol (token "}")
+            |. symbol "}"
         , succeed (\chars -> StringLiteral (String.fromList (List.concat chars)))
             |= some (stringChar indented)
         ]
@@ -633,13 +669,13 @@ stringChar : { indented : Bool } -> Parser (List Char)
 stringChar { indented } =
     oneOf
         [ succeed [ '\\' ]
-            |. symbol (token "\\\\")
+            |. symbol "\\\\"
         , succeed [ '"' ]
-            |. symbol (token "\\\"")
+            |. symbol "\\\""
         , succeed [ '$' ]
-            |. symbol (token "\\$")
+            |. symbol "\\$"
         , succeed [ '$' ]
-            |. backtrackable (symbol (token "$"))
+            |. backtrackable (symbol "$")
             |. (succeed String.dropLeft
                     |= Parser.getOffset
                     |= Parser.getSource
@@ -653,11 +689,11 @@ stringChar { indented } =
                         )
                )
         , succeed [ '\u{000D}' ]
-            |. symbol (token "\\r")
+            |. symbol "\\r"
         , succeed [ '\n' ]
-            |. symbol (token "\\n")
+            |. symbol "\\n"
         , succeed [ '\t' ]
-            |. symbol (token "\\t")
+            |. symbol "\\t"
         , if indented then
             let
                 notEnding : Parser.Parser c Problem ()
@@ -705,7 +741,7 @@ many item =
 attributeSet : Parser (List (Node Attribute))
 attributeSet =
     succeed identity
-        |. symbol (token "{")
+        |. symbol "{"
         |= inContext ParsingAttrset
             (sequence
                 { start = token ""
@@ -724,11 +760,11 @@ attribute =
         (succeed Tuple.pair
             |= attrPath
             |. spaces
-            |. symbol (token "=")
+            |. symbol "="
             |. spaces
             |= lazy (\_ -> expression)
             |. spaces
-            |. symbol (token ";")
+            |. symbol ";"
         )
 
 
@@ -793,7 +829,7 @@ reserved =
 list : Parser (List (Node Expression))
 list =
     succeed identity
-        |. symbol (token "[")
+        |. symbol "["
         |= inContext ParsingList
             (sequence
                 { start = token ""
@@ -827,6 +863,17 @@ innerSpaces : Parser ()
 innerSpaces =
     chompWhile
         (\c -> c == ' ' || c == '\t' || c == '\n')
+
+
+symbol : String -> Parser ()
+symbol v =
+    Parser.symbol (token v)
+
+
+
+---------------------
+-- Error to string --
+---------------------
 
 
 errorToString : String -> List DeadEnd -> String

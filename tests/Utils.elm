@@ -6,7 +6,7 @@ import Diff.ToString
 import Expect
 import Fake
 import Nix.Parser
-import Nix.Syntax.Expression exposing (AttrPath, Expression(..), Name(..), Pattern(..), StringElement(..))
+import Nix.Syntax.Expression exposing (AttrPath, Expression(..), LetDeclaration(..), Name(..), Pattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
 import Parser.Advanced as Parser
 
@@ -70,7 +70,7 @@ let_ cs e =
     node
         (LetExpr
             (List.map
-                (\( k, v ) -> node ( node k, v ))
+                (\( k, v ) -> node (LetDeclaration (node k) v))
                 cs
             )
             e

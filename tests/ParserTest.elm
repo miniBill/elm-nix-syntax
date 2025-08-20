@@ -1,4 +1,4 @@
-module ParserTest exposing (booleansFalseTest, booleansTrueTest, commentTest, functionApplication, lambda, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
+module ParserTest exposing (booleansFalseTest, booleansTrueTest, commentTest, functionApplication, intTest, lambda, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
 
 import Nix.Syntax.Expression exposing (Expression(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
@@ -95,6 +95,13 @@ nullTest =
     test "Null"
         "null"
         null
+
+
+intTest : Test
+intTest =
+    test "Int"
+        "123"
+        (int 123)
 
 
 functionApplication : Test
