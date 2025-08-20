@@ -1,6 +1,6 @@
-module ParserTest exposing (functionApplication, lambda, recordPattern, recordPattern2)
+module ParserTest exposing (functionApplication, indentedString, lambda, recordPattern, recordPattern2)
 
-import Nix.Syntax.Expression exposing (Expression(..), Pattern(..), RecordFieldPattern(..))
+import Nix.Syntax.Expression exposing (Expression(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Test exposing (Test)
 import Utils exposing (node, string, var)
 
@@ -33,6 +33,23 @@ lambda =
                         )
                         (var "lib")
                     )
+                )
+
+
+indentedString : Test
+indentedString =
+    Test.test "Indented string" <|
+        \_ ->
+            Utils.checkParser
+                """
+                ''
+                    multi
+                     line
+                      string 
+                ''
+            """
+                (node
+                    (StringExpr [ StringLiteral "multi\n line\n  string " ])
                 )
 
 

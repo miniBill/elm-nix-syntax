@@ -2,6 +2,7 @@ module Nix.Parser exposing (errorToString, parse, pattern)
 
 import Ansi.Color
 import List.Extra
+import Maybe.Extra
 import Nix.Syntax.Expression
     exposing
         ( AttrPath
@@ -16,7 +17,8 @@ import Nix.Syntax.Expression
         )
 import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
-import Parser.Advanced as Parser exposing ((|.), (|=), Token, andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, map, oneOf, problem, succeed, symbol)
+import Parser.Advanced as Parser exposing ((|.), (|=), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, map, oneOf, problem, sequence, succeed, symbol)
+import Parser.Advanced.Extra
 import Parser.Advanced.Workaround
 import Set exposing (Set)
 
@@ -37,7 +39,6 @@ type Problem
     | Expecting String
     | ExpectingVariable
     | ExpectingDigit
-    | UnexpectedChar
     | Unimplemented String
 
 
@@ -368,7 +369,7 @@ pattern =
                         (List.filterMap identity items)
                         { open = List.member Nothing items }
                 )
-                |= Parser.sequence
+                |= sequence
                     { start = token "{"
                     , item =
                         oneOf
@@ -418,19 +419,153 @@ string =
             |. symbol (token "\"")
             |= inContext ParsingString
                 (succeed identity
-                    |= many stringElement
+                    |= many (stringElement { indented = False })
                     |. symbol (token "\"")
                 )
         , succeed identity
-            |= problem (Unimplemented "indented string")
+            |= indentedString
         , succeed identity
             |= problem (Unimplemented "uri")
         ]
 
 
+indentedString : Parser (List StringElement)
+indentedString =
+    succeed cleanIndentation
+        |. symbol (token "''")
+        |= inContext ParsingString
+            (sequence
+                { start = token ""
+                , end = token "''"
+                , trailing = Parser.Optional
+                , separator = Token "\n" (Expecting "\\n")
+                , item = many (stringElement { indented = True })
+                , spaces = succeed ()
+                }
+            )
+
+
+cleanIndentation : List (List StringElement) -> List StringElement
+cleanIndentation lines =
+    let
+        withoutFirst : List (List StringElement)
+        withoutFirst =
+            case lines of
+                [] :: tail ->
+                    tail
+
+                _ ->
+                    lines
+
+        withoutLast : List (List StringElement)
+        withoutLast =
+            case List.reverse withoutFirst of
+                [] :: init ->
+                    List.reverse init
+
+                [ StringLiteral s ] :: init ->
+                    if String.isEmpty (String.trim s) then
+                        List.reverse init
+
+                    else
+                        withoutFirst
+
+                _ ->
+                    withoutFirst
+
+        commonIndentation : Int
+        commonIndentation =
+            withoutLast
+                |> List.map findIndentation
+                |> List.minimum
+                |> Maybe.withDefault 0
+
+        unindent : List StringElement -> Maybe (List StringElement)
+        unindent line =
+            case line of
+                (StringLiteral s) :: tail ->
+                    Just (StringLiteral (String.dropLeft commonIndentation s) :: tail)
+
+                _ ->
+                    -- Something has gone wrong
+                    Nothing
+
+        unindented : List (List StringElement)
+        unindented =
+            if commonIndentation > 0 then
+                Maybe.Extra.combineMap unindent withoutLast
+                    |> Maybe.withDefault withoutLast
+
+            else
+                withoutLast
+    in
+    unindented
+        |> List.Extra.intercalate [ StringLiteral "\n" ]
+        |> simplifyString
+
+
+findIndentation : List StringElement -> Int
+findIndentation elements =
+    case elements of
+        (StringLiteral s) :: _ ->
+            s |> String.toList |> countWhileSpace
+
+        _ ->
+            0
+
+
+countWhileSpace : List Char -> Int
+countWhileSpace c =
+    let
+        go : Int -> List Char -> Int
+        go acc q =
+            case q of
+                ' ' :: tail ->
+                    go (acc + 1) tail
+
+                _ ->
+                    acc
+    in
+    go 0 c
+
+
+simplifyString : List StringElement -> List StringElement
+simplifyString elements =
+    let
+        ( last, acc ) =
+            List.foldl
+                (\e ( l, a ) ->
+                    case e of
+                        StringInterpolation _ ->
+                            case l of
+                                Nothing ->
+                                    ( Nothing, e :: a )
+
+                                Just s ->
+                                    ( Nothing, e :: StringLiteral s :: a )
+
+                        StringLiteral el ->
+                            case l of
+                                Nothing ->
+                                    ( Just el, a )
+
+                                Just s ->
+                                    ( Just (s ++ el), a )
+                )
+                ( Nothing, [] )
+                elements
+    in
+    case last of
+        Nothing ->
+            List.reverse acc
+
+        Just l ->
+            List.reverse (StringLiteral l :: acc)
+
+
 token : String -> Token Problem
 token t =
-    Parser.Token t (Expecting t)
+    Token t (Expecting t)
 
 
 node : Parser a -> Parser (Node a)
@@ -460,8 +595,8 @@ location =
         |= Parser.getCol
 
 
-stringElement : Parser StringElement
-stringElement =
+stringElement : { indented : Bool } -> Parser StringElement
+stringElement indented =
     oneOf
         [ succeed (StringLiteral "$${")
             |. symbol (token "$${")
@@ -469,8 +604,8 @@ stringElement =
             |. symbol (token "${")
             |= lazy (\_ -> expression)
             |. symbol (token "}")
-        , succeed (\chars -> StringLiteral (String.fromList chars))
-            |= some stringChar
+        , succeed (\chars -> StringLiteral (String.fromList (List.concat chars)))
+            |= some (stringChar indented)
         ]
 
 
@@ -481,42 +616,41 @@ some inner =
         |= many inner
 
 
-stringChar : Parser Char
-stringChar =
+stringChar : { indented : Bool } -> Parser (List Char)
+stringChar { indented } =
     oneOf
-        [ succeed '\\'
+        [ succeed [ '\\' ]
             |. symbol (token "\\\\")
-        , succeed '"'
+        , succeed [ '"' ]
             |. symbol (token "\\\"")
-        , succeed '$'
+        , succeed [ '$' ]
             |. symbol (token "\\$")
-        , succeed '\u{000D}'
+        , succeed [ '\u{000D}' ]
             |. symbol (token "\\r")
-        , succeed '\n'
+        , succeed [ '\n' ]
             |. symbol (token "\\n")
-        , succeed '\t'
+        , succeed [ '\t' ]
             |. symbol (token "\\t")
-        , chompIf (\c -> c /= '\\' && c /= '"')
-            (Expecting "String character")
-            |> getChompedString
-            |> andThen
-                (\c ->
-                    case String.toList c of
-                        [ x ] ->
-                            succeed x
+        , if indented then
+            succeed String.toList
+                |. Parser.Advanced.Extra.negativeLookAhead (Expecting "char") (symbol (token "''"))
+                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n')
+                        (Expecting "String character")
+                        |> getChompedString
+                   )
 
-                        [] ->
-                            problem UnexpectedChar
-
-                        _ :: _ :: _ ->
-                            problem UnexpectedChar
-                )
+          else
+            succeed String.toList
+                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n')
+                        (Expecting "String character")
+                        |> getChompedString
+                   )
         ]
 
 
 many : Parser a -> Parser (List a)
 many item =
-    Parser.sequence
+    sequence
         { start = token ""
         , end = token ""
         , spaces = succeed ()
@@ -531,7 +665,7 @@ attributeSet =
     succeed identity
         |. symbol (token "{")
         |= inContext ParsingAttrset
-            (Parser.sequence
+            (sequence
                 { start = token ""
                 , spaces = spaces
                 , end = token "}"
@@ -559,7 +693,7 @@ attribute =
 attrPath : Parser (Node AttrPath)
 attrPath =
     node
-        (Parser.sequence
+        (sequence
             { start = token ""
             , end = token ""
             , separator = token "."
@@ -616,7 +750,7 @@ list =
     succeed identity
         |. symbol (token "[")
         |= inContext ParsingList
-            (Parser.sequence
+            (sequence
                 { start = token ""
                 , separator = token ""
                 , end = token "]"
@@ -713,9 +847,6 @@ deadEndToString lines ( head, tail ) =
                                     ExpectingDigit ->
                                         Nothing
 
-                                    UnexpectedChar ->
-                                        Nothing
-
                                     Unimplemented _ ->
                                         Nothing
                             )
@@ -736,9 +867,6 @@ deadEndToString lines ( head, tail ) =
                                         Just (problemToString problem)
 
                                     ExpectingDigit ->
-                                        Just (problemToString problem)
-
-                                    UnexpectedChar ->
                                         Just (problemToString problem)
 
                                     Unimplemented _ ->
@@ -885,9 +1013,6 @@ problemToString p =
 
         ExpectingEnd ->
             "expecting end"
-
-        UnexpectedChar ->
-            "unexpected char"
 
         Unimplemented s ->
             "unimplemented: " ++ s
