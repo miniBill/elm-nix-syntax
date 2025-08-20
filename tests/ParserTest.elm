@@ -139,7 +139,11 @@ longPathTest =
         \_ ->
             Utils.checkPathParser
                 "../../programs/wally-cli.nix"
-                [ "..", "..", "programs", "wally-cli.nix" ]
+                [ [ StringLiteral ".." ]
+                , [ StringLiteral ".." ]
+                , [ StringLiteral "programs" ]
+                , [ StringLiteral "wally-cli.nix" ]
+                ]
 
 
 recordPattern : Test

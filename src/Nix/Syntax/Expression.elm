@@ -37,7 +37,7 @@ type Expression
 
 
 type alias Path =
-    List String
+    List (List StringElement)
 
 
 type LetDeclaration

@@ -299,28 +299,23 @@ number =
 
 path : Parser Path
 path =
-    let
-        valid : Char -> Bool
-        valid c =
-            c /= ' ' && c /= '/' && c /= ';'
-    in
     oneOf
         [ succeed (::)
             |= oneOf
-                [ succeed "."
-                    |. symbol "."
-                , succeed ".."
+                [ succeed [ StringLiteral ".." ]
                     |. symbol ".."
+                , succeed [ StringLiteral "." ]
+                    |. symbol "."
                 ]
-            |= many
-                (succeed identity
-                    |. symbol "/"
-                    |= getChompedString
-                        (succeed ()
-                            |. chompIf valid (Expecting "path piece")
-                            |. chompWhile valid
-                        )
-                )
+            |. symbol "/"
+            |= sequence
+                { start = token ""
+                , end = token ""
+                , separator = token "/"
+                , spaces = succeed ()
+                , item = some (stringElement InPath)
+                , trailing = Parser.Forbidden
+                }
         , problem (Unimplemented "<> paths")
         ]
 
@@ -473,7 +468,7 @@ string =
             |. symbol "\""
             |= inContext ParsingString
                 (succeed identity
-                    |= many (stringElement { indented = False })
+                    |= many (stringElement InSinglelineString)
                     |. symbol "\""
                 )
         , succeed identity
@@ -493,7 +488,7 @@ indentedString =
                 , end = token "''"
                 , trailing = Parser.Optional
                 , separator = Token "\n" (Expecting "\\n")
-                , item = many (stringElement { indented = True })
+                , item = many (stringElement InMultilineString)
                 , spaces = succeed ()
                 }
             )
@@ -649,8 +644,14 @@ location =
         |= Parser.getCol
 
 
-stringElement : { indented : Bool } -> Parser StringElement
-stringElement indented =
+type StringElementKind
+    = InSinglelineString
+    | InMultilineString
+    | InPath
+
+
+stringElement : StringElementKind -> Parser StringElement
+stringElement kind =
     oneOf
         [ succeed (StringLiteral "$${")
             |. symbol "$${"
@@ -660,7 +661,7 @@ stringElement indented =
             |= lazy (\_ -> expression)
             |. symbol "}"
         , succeed (\chars -> StringLiteral (String.fromList (List.concat chars)))
-            |= some (stringChar indented)
+            |= some (stringChar kind)
         ]
 
 
@@ -671,8 +672,8 @@ some inner =
         |= many inner
 
 
-stringChar : { indented : Bool } -> Parser (List Char)
-stringChar { indented } =
+stringChar : StringElementKind -> Parser (List Char)
+stringChar kind =
     oneOf
         [ succeed [ '\\' ]
             |. symbol "\\\\"
@@ -700,35 +701,43 @@ stringChar { indented } =
             |. symbol "\\n"
         , succeed [ '\t' ]
             |. symbol "\\t"
-        , if indented then
-            let
-                notEnding : Parser.Parser c Problem ()
-                notEnding =
-                    succeed String.dropLeft
-                        |= Parser.getOffset
-                        |= Parser.getSource
-                        |> andThen
-                            (\cut ->
-                                if String.startsWith "''" cut then
-                                    problem (Expecting "char")
+        , case kind of
+            InMultilineString ->
+                let
+                    notEnding : Parser.Parser c Problem ()
+                    notEnding =
+                        succeed String.dropLeft
+                            |= Parser.getOffset
+                            |= Parser.getSource
+                            |> andThen
+                                (\cut ->
+                                    if String.startsWith "''" cut then
+                                        problem (Expecting "char")
 
-                                else
-                                    succeed ()
-                            )
-            in
-            succeed String.toList
-                |. backtrackable notEnding
-                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$')
-                        (Expecting "String character")
-                        |> getChompedString
-                   )
+                                    else
+                                        succeed ()
+                                )
+                in
+                succeed String.toList
+                    |. backtrackable notEnding
+                    |= (chompIf (\c -> c /= '\\' && c /= '\n' && c /= '$')
+                            (Expecting "String character")
+                            |> getChompedString
+                       )
 
-          else
-            succeed String.toList
-                |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$')
-                        (Expecting "String character")
-                        |> getChompedString
-                   )
+            InSinglelineString ->
+                succeed String.toList
+                    |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$')
+                            (Expecting "String character")
+                            |> getChompedString
+                       )
+
+            InPath ->
+                succeed String.toList
+                    |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n' && c /= '$' && c /= '/' && c /= ';' && c /= '(' && c /= '(' && c /= ' ')
+                            (Expecting "String character")
+                            |> getChompedString
+                       )
         ]
 
 

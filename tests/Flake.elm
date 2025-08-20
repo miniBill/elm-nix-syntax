@@ -501,10 +501,10 @@ homeConfigurations =
                                 ( [ "module" ]
                                 , node
                                     (PathExpr
-                                        [ "."
-                                        , "machines"
-                                        , name
-                                        , "home-manager.nix"
+                                        [ [ StringLiteral "." ]
+                                        , [ StringLiteral "machines" ]
+                                        , [ StringLiteral name ]
+                                        , [ StringLiteral "home-manager.nix" ]
                                         ]
                                     )
                                 )
@@ -562,10 +562,10 @@ nixosConfigurations =
                       , list
                             [ node
                                 (PathExpr
-                                    [ "."
-                                    , "machines"
-                                    , name
-                                    , "configuration.nix"
+                                    [ [ StringLiteral "." ]
+                                    , [ StringLiteral "machines" ]
+                                    , [ StringLiteral name ]
+                                    , [ StringLiteral "configuration.nix" ]
                                     ]
                                 )
                             ]

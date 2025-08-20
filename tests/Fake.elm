@@ -49,7 +49,7 @@ expression e =
             ListExpr (List.map nodeExpression cs)
 
         PathExpr p ->
-            PathExpr (List.map identityString p)
+            PathExpr (List.map (List.map stringElement) p)
 
         VariableExpr v ->
             VariableExpr (identityString v)
