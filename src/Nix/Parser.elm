@@ -18,7 +18,6 @@ import Nix.Syntax.Expression
 import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location)
 import Parser.Advanced as Parser exposing ((|.), (|=), Token(..), andThen, backtrackable, chompIf, chompWhile, end, getChompedString, inContext, keyword, lazy, map, oneOf, problem, sequence, succeed, symbol)
-import Parser.Advanced.Extra
 import Parser.Advanced.Workaround
 import Set exposing (Set)
 
@@ -633,7 +632,24 @@ stringChar { indented } =
             |. symbol (token "\\t")
         , if indented then
             succeed String.toList
-                |. Parser.Advanced.Extra.negativeLookAhead (Expecting "char") (symbol (token "''"))
+                |. backtrackable
+                    (succeed Tuple.pair
+                        |= Parser.getOffset
+                        |= Parser.getSource
+                        |> andThen
+                            (\( o, s ) ->
+                                let
+                                    cut : String
+                                    cut =
+                                        String.dropLeft o s
+                                in
+                                if String.startsWith "''" cut then
+                                    problem (Expecting "char")
+
+                                else
+                                    succeed ()
+                            )
+                    )
                 |= (chompIf (\c -> c /= '\\' && c /= '"' && c /= '\n')
                         (Expecting "String character")
                         |> getChompedString
