@@ -8,7 +8,7 @@ import Fake
 import Nix.Parser
 import Nix.Syntax.Expression exposing (AttrPath, Expression(..), Name(..), Pattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node(..))
-import Parser.Advanced
+import Parser.Advanced as Parser
 
 
 record : List ( List String, Node Expression ) -> Node Expression
@@ -113,7 +113,7 @@ checkPatternParser :
     -> Node Pattern
     -> Expect.Expectation
 checkPatternParser input value =
-    case Parser.Advanced.run Nix.Parser.pattern input of
+    case Parser.run Nix.Parser.pattern input of
         Ok parsed ->
             parsed
                 |> Fake.nodePattern
