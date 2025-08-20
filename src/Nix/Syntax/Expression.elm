@@ -3,10 +3,9 @@ module Nix.Syntax.Expression exposing (AttrPath, Attribute, Expression(..), LetD
 import Nix.Syntax.Node exposing (Node)
 
 
-type
-    Expression
-    -- = UnitExpr
-    = ApplicationExpr (Node Expression) (List (Node Expression))
+type Expression
+    = NullExpr
+    | ApplicationExpr (Node Expression) (List (Node Expression))
       -- | OperatorApplication String InfixDirection (Node Expression) (Node Expression)
     | VariableExpr String
       -- | IfBlock (Node Expression) (Node Expression) (Node Expression)

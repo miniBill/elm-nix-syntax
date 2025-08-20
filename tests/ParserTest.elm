@@ -1,9 +1,9 @@
-module ParserTest exposing (booleansFalseTest, booleansTrueTest, commentTest, functionApplication, lambda, multilineStringTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
+module ParserTest exposing (booleansFalseTest, booleansTrueTest, commentTest, functionApplication, lambda, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
 
 import Nix.Syntax.Expression exposing (Expression(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (apply, bool, int, node, record, string, var)
+import Utils exposing (apply, bool, int, node, null, record, string, var)
 
 
 test : String -> String -> Node Expression -> Test
@@ -88,6 +88,13 @@ booleansFalseTest =
     test "Booleans (false)"
         "false"
         (bool False)
+
+
+nullTest : Test
+nullTest =
+    test "Null"
+        "null"
+        null
 
 
 functionApplication : Test

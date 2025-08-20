@@ -66,6 +66,9 @@ expression e =
         BoolExpr b ->
             BoolExpr (identityBool b)
 
+        NullExpr ->
+            NullExpr
+
 
 identityBool : Bool -> Bool
 identityBool v =

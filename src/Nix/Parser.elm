@@ -229,6 +229,7 @@ expression_0_atom =
             , map VariableExpr identifier
             , map PathExpr path
             , map BoolExpr bool
+            , succeed NullExpr |. keyword (token "null")
             ]
         )
 
@@ -785,6 +786,7 @@ reserved =
         , "inherit"
         , "true"
         , "false"
+        , "null"
         ]
 
 

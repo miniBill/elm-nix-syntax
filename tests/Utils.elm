@@ -1,4 +1,4 @@
-module Utils exposing (apply, bool, checkParser, checkPatternParser, dot, function, int, let_, list, node, parens, record, string, update, var)
+module Utils exposing (apply, bool, checkParser, checkPatternParser, dot, function, int, let_, list, node, null, parens, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -95,6 +95,11 @@ int v =
 bool : Bool -> Node Expression
 bool v =
     node (BoolExpr v)
+
+
+null : Node Expression
+null =
+    node NullExpr
 
 
 node : a -> Node a
