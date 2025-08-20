@@ -653,6 +653,7 @@ innerSpaces =
 errorToString : String -> List DeadEnd -> String
 errorToString src deadEnds =
     let
+        lines : List ( Int, String )
         lines =
             src
                 |> String.split "\n"
