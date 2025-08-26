@@ -433,7 +433,6 @@ path =
                 , item = some (stringElement InPath)
                 , trailing = Parser.Forbidden
                 }
-        , problem (Unimplemented "<> paths")
         ]
 
 
