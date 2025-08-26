@@ -99,7 +99,7 @@ letDeclaration : LetDeclaration -> LetDeclaration
 letDeclaration decl =
     case decl of
         LetDeclaration k v ->
-            LetDeclaration (List.map (node identityString) k) (nodeExpression v)
+            LetDeclaration (node attrpath k) (nodeExpression v)
 
         LetInheritVariables vs ->
             LetInheritVariables (List.map (node identityString) vs)

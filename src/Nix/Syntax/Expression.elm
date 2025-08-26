@@ -44,7 +44,7 @@ type alias Path =
 
 
 type LetDeclaration
-    = LetDeclaration (List (Node String)) (Node Expression)
+    = LetDeclaration (Node AttrPath) (Node Expression)
     | LetInheritVariables (List (Node String))
     | LetInheritFromSet (Node Expression) (List (Node String))
 

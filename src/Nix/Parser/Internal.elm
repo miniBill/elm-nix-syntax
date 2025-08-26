@@ -495,13 +495,8 @@ letDeclaration : Parser (Node LetDeclaration)
 letDeclaration =
     node
         (oneOf
-            [ succeed (\h t -> LetDeclaration (h :: t))
-                |= node identifier
-                |= many
-                    (succeed identity
-                        |. symbol "."
-                        |= node identifier
-                    )
+            [ succeed LetDeclaration
+                |= attrPath
                 |. spaces
                 |. symbol "="
                 |. spaces
