@@ -275,18 +275,7 @@ leftAssociativeOperators ops parseItem =
                         node
                             (succeed op
                                 |. backtrackable (symbol op)
-                                |. (succeed (\offset source -> String.slice offset (offset + 1) source)
-                                        |= Parser.getOffset
-                                        |= Parser.getSource
-                                        |> andThen
-                                            (\sliced ->
-                                                if sliced == "/" then
-                                                    problem (Unexpected "/")
-
-                                                else
-                                                    succeed ()
-                                            )
-                                   )
+                                |. negativeLookahead "/"
                             )
                     )
                     ops
@@ -314,6 +303,21 @@ leftAssociativeOperators ops parseItem =
                 ]
     in
     parseItem |> andThen (\item -> loop item step)
+
+
+negativeLookahead : String -> Parser ()
+negativeLookahead forbidden =
+    succeed (\offset source -> String.slice offset (offset + String.length forbidden) source)
+        |= Parser.getOffset
+        |= Parser.getSource
+        |> andThen
+            (\sliced ->
+                if sliced == forbidden then
+                    problem (Unexpected forbidden)
+
+                else
+                    succeed ()
+            )
 
 
 rightAssociativeOperators : List String -> Parser (Node Expression) -> Parser (Node Expression)
@@ -427,6 +431,16 @@ path =
             |. symbol "/"
             |= sequence
                 { start = token ""
+                , end = token ""
+                , separator = token "/"
+                , spaces = succeed ()
+                , item = some (stringElement InPath)
+                , trailing = Parser.Forbidden
+                }
+        , succeed ((::) [ StringLiteral "" ])
+            |. negativeLookahead "//"
+            |= sequence
+                { start = token "/"
                 , end = token ""
                 , separator = token "/"
                 , spaces = succeed ()
