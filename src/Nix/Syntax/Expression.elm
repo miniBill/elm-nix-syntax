@@ -82,7 +82,7 @@ type Pattern
       -- | UnConsPattern (Node Pattern) (Node Pattern)
       -- | ListPattern (List (Node Pattern))
     | VarPattern String
-      -- | AsPattern (Node Pattern) (Node String)
+    | AtPattern (Node Pattern) (Node String)
     | ParenthesizedPattern (Node Pattern)
 
 

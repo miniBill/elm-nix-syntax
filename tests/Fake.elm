@@ -123,6 +123,9 @@ pattern p =
         ParenthesizedPattern c ->
             ParenthesizedPattern (nodePattern c)
 
+        AtPattern c n ->
+            AtPattern (nodePattern c) (node identityString n)
+
 
 recordFieldPattern : RecordFieldPattern -> RecordFieldPattern
 recordFieldPattern (RecordFieldPattern k default) =

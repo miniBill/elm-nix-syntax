@@ -528,8 +528,8 @@ function =
 pattern : Parser (Node Pattern)
 pattern =
     let
-        inner : List (Parser Pattern)
-        inner =
+        atom : List (Parser Pattern)
+        atom =
             [ succeed
                 (\items ->
                     RecordPattern
@@ -559,13 +559,29 @@ pattern =
                 |. spaces
                 |= lazy (\_ -> pattern)
                 |. symbol ")"
-            , problem (Unimplemented "@-pattern")
             ]
+
+        inner : Parser (Node Pattern)
+        inner =
+            succeed (\x f -> f x)
+                |= node (oneOf atom)
+                |. spaces
+                |= oneOf
+                    [ succeed
+                        (\r l ->
+                            Node
+                                { start = (Node.range l).start
+                                , end = (Node.range r).end
+                                }
+                                (AtPattern l r)
+                        )
+                        |. symbol "@"
+                        |. spaces
+                        |= node identifier
+                    , succeed identity
+                    ]
     in
-    node
-        (inContext ParsingPattern
-            (oneOf inner)
-        )
+    inContext ParsingPattern inner
         |. spaces
 
 
