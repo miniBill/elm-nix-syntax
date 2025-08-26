@@ -1,7 +1,10 @@
 {
-  "license": "BSD-3-Clause",
-  "devDependencies": {
-    "elm-review": "^2.13.4",
-    "elm-test-rs": "^3.0.1-0"
-  }
+    "license": "BSD-3-Clause",
+    "devDependencies": {
+        "elm-review": "^2.13.4",
+        "elm-test-rs": "^3.0.1-0"
+    },
+    "scripts": {
+        "test:watch": "elm-test-rs --compiler $(which lamdera) --watch"
+    }
 }
