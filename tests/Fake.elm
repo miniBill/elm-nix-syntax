@@ -69,11 +69,17 @@ expression e =
         WithExpr l r ->
             WithExpr (nodeExpression l) (nodeExpression r)
 
+        AssertExpr l r ->
+            AssertExpr (nodeExpression l) (nodeExpression r)
+
         OperatorApplicationExpr l op r ->
             OperatorApplicationExpr (nodeExpression l) (node identityString op) (nodeExpression r)
 
         LookupPathExpr c ->
             LookupPathExpr (List.map identityString c)
+
+        IfThenElseExpr c t f ->
+            IfThenElseExpr (nodeExpression c) (nodeExpression t) (nodeExpression f)
 
 
 identityBool : Bool -> Bool
@@ -96,7 +102,7 @@ letDeclaration decl =
             LetInheritVariables (List.map (node identityString) vs)
 
         LetInheritFromSet s vs ->
-            LetInheritFromSet (node identityString s) (List.map (node identityString) vs)
+            LetInheritFromSet (nodeExpression s) (List.map (node identityString) vs)
 
 
 pattern : Pattern -> Pattern
@@ -139,7 +145,7 @@ attribute attr =
             AttributeInheritVariables (List.map (node identityString) vs)
 
         AttributeInheritFromSet s vs ->
-            AttributeInheritFromSet (node identityString s) (List.map (node identityString) vs)
+            AttributeInheritFromSet (nodeExpression s) (List.map (node identityString) vs)
 
 
 attrpath : AttrPath -> AttrPath

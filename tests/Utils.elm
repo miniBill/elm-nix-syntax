@@ -139,7 +139,14 @@ checkParser input value =
                 |> expectEqualMultiline (toStringish value)
 
         Err e ->
-            Expect.fail (Nix.Parser.Extra.errorToString input e)
+            Expect.fail
+                (Nix.Parser.Extra.errorToString
+                    { cyan = Ansi.Color.fontColor Ansi.Color.cyan
+                    , red = Ansi.Color.fontColor Ansi.Color.red
+                    }
+                    input
+                    e
+                )
 
 
 checkPathParser :
@@ -161,7 +168,14 @@ checkPathParser input value =
                 |> expectEqualMultiline (toStringish value)
 
         Err e ->
-            Expect.fail (Nix.Parser.Extra.errorToString input e)
+            Expect.fail
+                (Nix.Parser.Extra.errorToString
+                    { cyan = Ansi.Color.fontColor Ansi.Color.cyan
+                    , red = Ansi.Color.fontColor Ansi.Color.red
+                    }
+                    input
+                    e
+                )
 
 
 checkPatternParser :
@@ -184,7 +198,14 @@ checkPatternParser input value =
                 |> expectEqualMultiline (toStringish value)
 
         Err e ->
-            Expect.fail (Nix.Parser.Extra.errorToString input e)
+            Expect.fail
+                (Nix.Parser.Extra.errorToString
+                    { cyan = Ansi.Color.fontColor Ansi.Color.cyan
+                    , red = Ansi.Color.fontColor Ansi.Color.red
+                    }
+                    input
+                    e
+                )
 
 
 toStringish : a -> String
