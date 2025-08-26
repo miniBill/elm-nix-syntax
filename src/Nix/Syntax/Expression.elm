@@ -83,6 +83,7 @@ type Pattern
       -- | ListPattern (List (Node Pattern))
     | VarPattern String
     | AtPattern (Node Pattern) (Node String)
+    | ReverseAtPattern (Node String) (Node Pattern)
     | ParenthesizedPattern (Node Pattern)
 
 

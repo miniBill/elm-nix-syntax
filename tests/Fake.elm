@@ -126,6 +126,9 @@ pattern p =
         AtPattern c n ->
             AtPattern (nodePattern c) (node identityString n)
 
+        ReverseAtPattern n c ->
+            ReverseAtPattern (node identityString n) (nodePattern c)
+
 
 recordFieldPattern : RecordFieldPattern -> RecordFieldPattern
 recordFieldPattern (RecordFieldPattern k default) =

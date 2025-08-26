@@ -587,23 +587,44 @@ pattern =
 
         inner : Parser (Node Pattern)
         inner =
-            succeed (\x f -> f x)
+            succeed identity
                 |= node (oneOf atom)
                 |. spaces
-                |= oneOf
-                    [ succeed
-                        (\r l ->
-                            Node
-                                { start = (Node.range l).start
-                                , end = (Node.range r).end
-                                }
-                                (AtPattern l r)
-                        )
-                        |. symbol "@"
-                        |. spaces
-                        |= node identifier
-                    , succeed identity
-                    ]
+                |> andThen
+                    (\l ->
+                        case l of
+                            Node lRange (VarPattern lvar) ->
+                                oneOf
+                                    [ succeed
+                                        (\r ->
+                                            Node
+                                                { start = (Node.range l).start
+                                                , end = (Node.range r).end
+                                                }
+                                                (ReverseAtPattern (Node lRange lvar) r)
+                                        )
+                                        |. symbol "@"
+                                        |. spaces
+                                        |= lazy (\_ -> pattern)
+                                    , succeed l
+                                    ]
+
+                            _ ->
+                                oneOf
+                                    [ succeed
+                                        (\r ->
+                                            Node
+                                                { start = (Node.range l).start
+                                                , end = (Node.range r).end
+                                                }
+                                                (AtPattern l r)
+                                        )
+                                        |. symbol "@"
+                                        |. spaces
+                                        |= node identifier
+                                    , succeed l
+                                    ]
+                    )
     in
     inContext ParsingPattern inner
         |. spaces
