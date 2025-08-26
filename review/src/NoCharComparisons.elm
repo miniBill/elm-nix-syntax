@@ -7,7 +7,7 @@ module NoCharComparisons exposing (rule)
 -}
 
 import Elm.Syntax.Expression as Expression exposing (Expression)
-import Elm.Syntax.Node as Node exposing (Node(..))
+import Elm.Syntax.Node exposing (Node(..))
 import Hex
 import Review.Fix as Fix
 import Review.Rule as Rule exposing (Rule)
