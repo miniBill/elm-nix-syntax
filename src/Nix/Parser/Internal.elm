@@ -767,21 +767,47 @@ stringChar kind =
                 in
                 succeed String.toList
                     |. backtrackable notEnding
-                    |= (chompIf (\c -> c /= '\n' && c /= '$')
+                    |= (chompIf
+                            (\c ->
+                                let
+                                    code : Int
+                                    code =
+                                        Char.toCode c
+                                in
+                                code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24
+                            )
                             (Expecting "String character")
                             |> getChompedString
                        )
 
             InSinglelineString ->
                 succeed String.toList
-                    |= (chompIf (\c -> c /= '"' && c /= '\n' && c /= '$')
+                    |= (chompIf
+                            (\c ->
+                                let
+                                    code : Int
+                                    code =
+                                        Char.toCode c
+                                in
+                                code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= 0x24
+                             {- '$' -}
+                            )
                             (Expecting "String character")
                             |> getChompedString
                        )
 
             InPath ->
                 succeed String.toList
-                    |= (chompIf (\c -> c /= '"' && c /= '\n' && c /= '$' && c /= '/' && c /= ';' && c /= '(' && c /= ')' && c /= ' ')
+                    |= (chompIf
+                            (\c ->
+                                let
+                                    code : Int
+                                    code =
+                                        Char.toCode c
+                                in
+                                code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24 && code /= {- '/' -} 0x2F && code /= {- ';' -} 0x3B && code /= {- '(' -} 0x28 && code /= {- ')' -} 0x29 && code /= 0x20
+                             {- ' ' -}
+                            )
                             (Expecting "String character")
                             |> getChompedString
                        )
