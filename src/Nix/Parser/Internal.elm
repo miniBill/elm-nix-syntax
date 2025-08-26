@@ -455,7 +455,7 @@ letDeclaration =
                     [ succeed LetInheritFromSet
                         |. symbol "("
                         |. spaces
-                        |= node identifier
+                        |= lazy (\_ -> expression)
                         |. spaces
                         |. symbol ")"
                         |. spaces
@@ -906,7 +906,7 @@ attribute =
                     [ succeed AttributeInheritFromSet
                         |. symbol "("
                         |. spaces
-                        |= node identifier
+                        |= lazy (\_ -> expression)
                         |. spaces
                         |. symbol ")"
                         |. spaces
