@@ -864,8 +864,6 @@ stringChar kind =
         , succeed [ '"' ]
             |. symbol "\\\""
         , succeed [ '$' ]
-            |. symbol "\\$"
-        , succeed [ '$' ]
             |. backtrackable (symbol "$")
             |. (succeed String.dropLeft
                     |= Parser.getOffset
@@ -889,51 +887,61 @@ stringChar kind =
             |. symbol "\\}"
         , case kind of
             InMultilineString ->
-                let
-                    notEnding : Parser.Parser c Problem ()
-                    notEnding =
-                        succeed String.dropLeft
-                            |= Parser.getOffset
-                            |= Parser.getSource
-                            |> andThen
-                                (\cut ->
-                                    if String.startsWith "''" cut then
-                                        problem (Expecting "char")
+                oneOf
+                    [ succeed [ '$' ]
+                        |. symbol "''$"
+                    , succeed [ '\'' ]
+                        |. symbol "'''"
+                    , let
+                        notEnding : Parser.Parser c Problem ()
+                        notEnding =
+                            succeed String.dropLeft
+                                |= Parser.getOffset
+                                |= Parser.getSource
+                                |> andThen
+                                    (\cut ->
+                                        if String.startsWith "''" cut then
+                                            problem (Expecting "char")
 
-                                    else
-                                        succeed ()
+                                        else
+                                            succeed ()
+                                    )
+                      in
+                      succeed String.toList
+                        |. backtrackable notEnding
+                        |= (chompIf
+                                (\c ->
+                                    let
+                                        code : Int
+                                        code =
+                                            Char.toCode c
+                                    in
+                                    code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24
                                 )
-                in
-                succeed String.toList
-                    |. backtrackable notEnding
-                    |= (chompIf
-                            (\c ->
-                                let
-                                    code : Int
-                                    code =
-                                        Char.toCode c
-                                in
-                                code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24
-                            )
-                            (Expecting "String character")
-                            |> getChompedString
-                       )
+                                (Expecting "String character")
+                                |> getChompedString
+                           )
+                    ]
 
             InSinglelineString ->
-                succeed String.toList
-                    |= (chompIf
-                            (\c ->
-                                let
-                                    code : Int
-                                    code =
-                                        Char.toCode c
-                                in
-                                code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= 0x24
-                             {- '$' -}
-                            )
-                            (Expecting "String character")
-                            |> getChompedString
-                       )
+                oneOf
+                    [ succeed [ '$' ]
+                        |. symbol "\\$"
+                    , succeed String.toList
+                        |= (chompIf
+                                (\c ->
+                                    let
+                                        code : Int
+                                        code =
+                                            Char.toCode c
+                                    in
+                                    code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= 0x24
+                                 {- '$' -}
+                                )
+                                (Expecting "String character")
+                                |> getChompedString
+                           )
+                    ]
 
             InPath ->
                 succeed String.toList
@@ -1092,7 +1100,6 @@ reserved =
         , "in"
         , "inherit"
         , "let"
-        , "null"
         , "then"
         , "true"
         , "with"
