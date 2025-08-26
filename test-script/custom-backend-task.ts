@@ -1,7 +1,7 @@
 export function profile() {
-    // console.profile();
+    console.profile();
 }
 
 export function profileEnd() {
-    // console.profileEnd();
+    console.profileEnd();
 }
