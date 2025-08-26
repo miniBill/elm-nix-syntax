@@ -96,6 +96,13 @@ tryParse file =
                     , body =
                         "Parsing failed in "
                             ++ file
+                            ++ (case e of
+                                    [] ->
+                                        ""
+
+                                    { row, col } :: _ ->
+                                        ":" ++ String.fromInt row ++ ":" ++ String.fromInt col
+                               )
                             ++ "\n\n"
                             ++ msg
                     }
