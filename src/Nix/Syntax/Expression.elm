@@ -14,7 +14,7 @@ type Expression
     | ApplicationExpr (Node Expression) (List (Node Expression))
     | OperatorApplicationExpr (Node Expression) (Node String) (Node Expression)
     | VariableExpr String
-      -- | IfBlock (Node Expression) (Node Expression) (Node Expression)
+    | IfThenElseExpr (Node Expression) (Node Expression) (Node Expression)
       -- | PrefixOperator String
     | BoolExpr Bool
     | IntExpr Int

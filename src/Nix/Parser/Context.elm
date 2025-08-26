@@ -10,3 +10,4 @@ type Context
     | ParsingLet
     | ParsingApplication
     | ParsingPattern
+    | ParsingIfThenElse

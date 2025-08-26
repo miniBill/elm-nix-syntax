@@ -132,7 +132,10 @@ contextToString context =
             "function"
 
         ParsingLet ->
-            "let"
+            "let/in"
+
+        ParsingIfThenElse ->
+            "if/then/else"
 
         ParsingApplication ->
             "application"

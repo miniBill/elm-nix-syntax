@@ -36,6 +36,7 @@ expression =
     inContext ParsingExpression
         (oneOf
             [ node letIn
+            , node ifThenElse
             , node function
             , node with
             , expression_14_logicalImplication
@@ -386,6 +387,23 @@ letIn =
             (succeed LetExpr
                 |= many letDeclaration
                 |. keyword "in"
+                |. spaces
+                |= lazy (\_ -> expression)
+            )
+
+
+ifThenElse : Parser Expression
+ifThenElse =
+    succeed identity
+        |. keyword "if"
+        |. spaces
+        |= inContext ParsingIfThenElse
+            (succeed IfThenElseExpr
+                |= lazy (\_ -> expression)
+                |. keyword "then"
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. keyword "else"
                 |. spaces
                 |= lazy (\_ -> expression)
             )
@@ -946,13 +964,16 @@ identifier =
 reserved : Set String
 reserved =
     Set.fromList
-        [ "let"
-        , "in"
-        , "with"
-        , "inherit"
-        , "true"
+        [ "else"
         , "false"
+        , "if"
+        , "in"
+        , "inherit"
+        , "let"
         , "null"
+        , "then"
+        , "true"
+        , "with"
         ]
 
 
