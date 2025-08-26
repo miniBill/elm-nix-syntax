@@ -912,7 +912,14 @@ identifier =
     let
         start : Char -> Bool
         start c =
-            Char.toCode c == 0x5F {- '_' -} || Char.isAlpha c
+            let
+                code : Int
+                code =
+                    Char.toCode c
+            in
+            (code == {- '_' -} 0x5F)
+                || (0x61 {- 'a' -} <= code && code <= {- 'z' -} 0x7A)
+                || (0x41 {- 'A' -} <= code && code <= {- 'Z' -} 0x5A)
 
         inner : Char -> Bool
         inner c =
@@ -921,7 +928,12 @@ identifier =
                 code =
                     Char.toCode c
             in
-            code == 0x5F {- '_' -} || code == 0x27 {- '\'' -} || code == 0x2D {- '-' -} || Char.isAlphaNum c
+            (code == {- '_' -} 0x5F)
+                || (code == {- '\'' -} 0x27)
+                || (code == {- '-' -} 0x2D)
+                || (0x61 {- 'a' -} <= code && code <= {- 'z' -} 0x7A)
+                || (0x41 {- 'A' -} <= code && code <= {- 'Z' -} 0x5A)
+                || (0x30 {- '0' -} <= code && code <= {- '9' -} 0x39)
     in
     Parser.variable
         { start = start
