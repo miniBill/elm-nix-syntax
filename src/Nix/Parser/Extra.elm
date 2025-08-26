@@ -81,6 +81,9 @@ problemToExpected problem =
         ExpectingVariable ->
             Parser.Error.Expected "a variable"
 
+        ExpectingIdentifier ->
+            Parser.Error.Expected "an identifier"
+
         ExpectingDigit ->
             Parser.Error.Expected "a digit"
 

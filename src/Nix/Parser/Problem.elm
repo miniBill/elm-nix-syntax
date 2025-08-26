@@ -5,6 +5,7 @@ type Problem
     = ExpectingEnd
     | Expecting String
     | ExpectingVariable
+    | ExpectingIdentifier
     | ExpectingDigit
     | Unexpected String
     | Unimplemented String

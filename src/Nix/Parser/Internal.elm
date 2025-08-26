@@ -243,14 +243,16 @@ expression_0_atom =
 
 lookupPath : Parser (List String)
 lookupPath =
-    sequence
-        { start = token "<"
-        , end = token ">"
-        , separator = token "/"
-        , spaces = succeed ()
-        , trailing = Parser.Forbidden
-        , item = identifier
-        }
+    succeed identity
+        |. backtrackable (symbol "<")
+        |= sequence
+            { start = token ""
+            , end = token ">"
+            , separator = token "/"
+            , spaces = succeed ()
+            , trailing = Parser.Forbidden
+            , item = identifier
+            }
 
 
 leftAssociativeOperators : List String -> Parser (Node Expression) -> Parser (Node Expression)
@@ -1004,7 +1006,7 @@ identifier =
         { start = start
         , inner = inner
         , reserved = reserved
-        , expecting = ExpectingVariable
+        , expecting = ExpectingIdentifier
         }
 
 
