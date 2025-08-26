@@ -237,6 +237,7 @@ expression_0_atom =
     node
         (oneOf
             [ succeed NullExpr |. keyword "null"
+            , map BoolExpr bool
             , map StringExpr string
             , number
             , map RecordExpr attributeSet
@@ -245,7 +246,6 @@ expression_0_atom =
             , map VariableExpr identifier
             , map PathExpr path
             , map LookupPathExpr lookupPath
-            , map BoolExpr bool
             ]
         )
 
@@ -495,8 +495,13 @@ letDeclaration : Parser (Node LetDeclaration)
 letDeclaration =
     node
         (oneOf
-            [ succeed LetDeclaration
+            [ succeed (\h t -> LetDeclaration (h :: t))
                 |= node identifier
+                |= many
+                    (succeed identity
+                        |. symbol "."
+                        |= node identifier
+                    )
                 |. spaces
                 |. symbol "="
                 |. spaces
@@ -1104,13 +1109,11 @@ reserved =
     Set.fromList
         [ "assert"
         , "else"
-        , "false"
         , "if"
         , "in"
         , "inherit"
         , "let"
         , "then"
-        , "true"
         , "with"
         ]
 

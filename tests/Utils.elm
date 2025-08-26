@@ -89,7 +89,7 @@ let_ cs e =
     node
         (LetExpr
             (List.map
-                (\( k, v ) -> node (LetDeclaration (node k) v))
+                (\( k, v ) -> node (LetDeclaration [ node k ] v))
                 cs
             )
             e
