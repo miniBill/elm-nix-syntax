@@ -2,6 +2,7 @@ module ParsingNixpkgs exposing (..)
 
 import Ansi.Color
 import BackendTask exposing (BackendTask)
+import BackendTask.Custom as Custom
 import BackendTask.Do as Do
 import BackendTask.File as File
 import BackendTask.Glob as Glob
@@ -9,6 +10,8 @@ import Cli.Option
 import Cli.OptionsParser
 import Cli.Program
 import FatalError exposing (FatalError)
+import Json.Decode
+import Json.Encode
 import List.Extra
 import Nix.Parser
 import Nix.Parser.Context exposing (Context(..))
@@ -40,11 +43,27 @@ script : CliOptions -> BackendTask FatalError ()
 script { path } =
     Do.do (files path) <| \list ->
     Do.log ("Found " ++ String.fromInt (List.length list) ++ " files") <| \() ->
-    List.map tryParse list
-        |> List.Extra.greedyGroupsOf 10
-        |> List.map (\g -> g |> BackendTask.combine |> ignoreList)
-        |> BackendTask.sequence
-        |> ignoreList
+    Do.allowFatal profile <| \() ->
+    Do.do
+        (List.map tryParse list
+            |> List.Extra.greedyGroupsOf 10
+            |> List.map (\g -> g |> BackendTask.combine |> ignoreList)
+            |> BackendTask.sequence
+            |> ignoreList
+        )
+    <| \_ ->
+    Do.allowFatal profileEnd <| \() ->
+    Do.noop
+
+
+profile : BackendTask { fatal : FatalError, recoverable : Custom.Error } ()
+profile =
+    Custom.run "profile" Json.Encode.null (Json.Decode.succeed ())
+
+
+profileEnd : BackendTask { fatal : FatalError, recoverable : Custom.Error } ()
+profileEnd =
+    Custom.run "profileEnd" Json.Encode.null (Json.Decode.succeed ())
 
 
 ignoreList : BackendTask FatalError (List ()) -> BackendTask FatalError ()
