@@ -1,5 +1,6 @@
 module Nix.Parser.Extra exposing (errorToString)
 
+import Json.Encode
 import Nix.Parser
 import Nix.Parser.Context exposing (Context(..))
 import Nix.Parser.Problem exposing (Problem(..))
@@ -73,7 +74,7 @@ problemToExpected : Problem -> Parser.Error.Expected
 problemToExpected problem =
     case problem of
         Expecting t ->
-            Parser.Error.Expected t
+            Parser.Error.Expected (escape t)
 
         ExpectingEnd ->
             Parser.Error.Expected "the end"
@@ -92,3 +93,8 @@ problemToExpected problem =
 
         Unimplemented t ->
             Parser.Error.Other ("Unimplemented: " ++ t)
+
+
+escape : String -> String
+escape s =
+    Json.Encode.encode 0 (Json.Encode.string s)

@@ -858,102 +858,41 @@ some inner =
 
 stringChar : StringElementKind -> Parser (List Char)
 stringChar kind =
-    oneOf
-        [ case kind of
-            InMultilineString ->
-                oneOf
-                    [ succeed [ '$' ]
-                        |. symbol "''$"
-                    , succeed [ '\'', '\'' ]
-                        |. symbol "'''"
-                    , succeed [ '\n' ]
-                        |. symbol "''\\n"
-                    , succeed [ '\u{000D}' ]
-                        |. symbol "''\\r"
-                    , succeed [ '\t' ]
-                        |. symbol "''\\t"
-                    , succeed [ '}' ]
-                        |. symbol "\\}"
-                    , succeed [ '$' ]
-                        |. backtrackable (symbol "$")
-                        |. negativeLookahead "{"
-                    , let
-                        notEnding : Parser.Parser c Problem ()
-                        notEnding =
-                            succeed String.dropLeft
-                                |= Parser.getOffset
-                                |= Parser.getSource
-                                |> andThen
-                                    (\cut ->
-                                        if String.startsWith "''" cut then
-                                            problem (Expecting "char")
+    case kind of
+        InMultilineString ->
+            oneOf
+                [ succeed [ '$' ]
+                    |. symbol "''$"
+                , succeed [ '\'', '\'' ]
+                    |. symbol "'''"
+                , succeed [ '\n' ]
+                    |. symbol "''\\n"
+                , succeed [ '\u{000D}' ]
+                    |. symbol "''\\r"
+                , succeed [ '\t' ]
+                    |. symbol "''\\t"
+                , succeed [ '}' ]
+                    |. symbol "\\}"
+                , succeed [ '$' ]
+                    |. backtrackable (symbol "$")
+                    |. negativeLookahead "{"
+                , let
+                    notEnding : Parser.Parser c Problem ()
+                    notEnding =
+                        succeed String.dropLeft
+                            |= Parser.getOffset
+                            |= Parser.getSource
+                            |> andThen
+                                (\cut ->
+                                    if String.startsWith "''" cut then
+                                        problem (Expecting "char")
 
-                                        else
-                                            succeed ()
-                                    )
-                      in
-                      succeed String.toList
-                        |. backtrackable notEnding
-                        |= (chompIf
-                                (\c ->
-                                    let
-                                        code : Int
-                                        code =
-                                            Char.toCode c
-                                    in
-                                    code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24
+                                    else
+                                        succeed ()
                                 )
-                                (Expecting "String character")
-                                |> getChompedString
-                           )
-                    ]
-
-            InSinglelineString ->
-                oneOf
-                    [ succeed [ '\\' ]
-                        |. symbol "\\\\"
-                    , succeed [ '"' ]
-                        |. symbol "\\\""
-                    , succeed [ '$' ]
-                        |. symbol "\\$"
-                    , succeed [ '\u{000D}' ]
-                        |. symbol "\\r"
-                    , succeed [ '\n' ]
-                        |. symbol "\\n"
-                    , succeed [ '\t' ]
-                        |. symbol "\\t"
-                    , succeed [ '$' ]
-                        |. backtrackable (symbol "$")
-                        |. (succeed String.dropLeft
-                                |= Parser.getOffset
-                                |= Parser.getSource
-                                |> andThen
-                                    (\cut ->
-                                        if String.startsWith "{" cut then
-                                            problem (Unexpected "{")
-
-                                        else
-                                            succeed ()
-                                    )
-                           )
-                    , succeed String.toList
-                        |= (chompIf
-                                (\c ->
-                                    let
-                                        code : Int
-                                        code =
-                                            Char.toCode c
-                                    in
-                                    code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= 0x24
-                                 {- '$' -}
-                                )
-                                (Expecting "String character")
-                                |> getChompedString
-                           )
-                    ]
-
-            InPath ->
-                succeed String.toList
+                  in
+                  succeed String.toList
+                    |. backtrackable notEnding
                     |= (chompIf
                             (\c ->
                                 let
@@ -961,13 +900,72 @@ stringChar kind =
                                     code =
                                         Char.toCode c
                                 in
-                                code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24 && code /= {- '/' -} 0x2F && code /= {- ';' -} 0x3B && code /= {- '(' -} 0x28 && code /= {- ')' -} 0x29 && code /= 0x20 && code /= {- '}' -} 0x7D
-                             {- ' ' -}
+                                code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24
                             )
                             (Expecting "String character")
                             |> getChompedString
                        )
-        ]
+                ]
+
+        InSinglelineString ->
+            oneOf
+                [ succeed [ '\\' ]
+                    |. symbol "\\\\"
+                , succeed [ '"' ]
+                    |. symbol "\\\""
+                , succeed [ '$' ]
+                    |. symbol "\\$"
+                , succeed [ '\u{000D}' ]
+                    |. symbol "\\r"
+                , succeed [ '\n' ]
+                    |. symbol "\\n"
+                , succeed [ '\t' ]
+                    |. symbol "\\t"
+                , succeed [ '$' ]
+                    |. backtrackable (symbol "$")
+                    |. (succeed String.dropLeft
+                            |= Parser.getOffset
+                            |= Parser.getSource
+                            |> andThen
+                                (\cut ->
+                                    if String.startsWith "{" cut then
+                                        problem (Unexpected "{")
+
+                                    else
+                                        succeed ()
+                                )
+                       )
+                , succeed String.toList
+                    |= (chompIf
+                            (\c ->
+                                let
+                                    code : Int
+                                    code =
+                                        Char.toCode c
+                                in
+                                code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= 0x24
+                             {- '$' -}
+                            )
+                            (Expecting "String character")
+                            |> getChompedString
+                       )
+                ]
+
+        InPath ->
+            succeed String.toList
+                |= (chompIf
+                        (\c ->
+                            let
+                                code : Int
+                                code =
+                                    Char.toCode c
+                            in
+                            code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24 && code /= {- '/' -} 0x2F && code /= {- ';' -} 0x3B && code /= {- '(' -} 0x28 && code /= {- ')' -} 0x29 && code /= 0x20 && code /= {- '}' -} 0x7D
+                         {- ' ' -}
+                        )
+                        (Expecting "String character")
+                        |> getChompedString
+                   )
 
 
 many : Parser a -> Parser (List a)

@@ -1,9 +1,9 @@
-module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest)
+module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest, weirdPatter)
 
 import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (apply, bool, float, int, minus, node, null, path, plus, record, string, var)
+import Utils exposing (apply, bool, float, int, list, minus, node, null, path, plus, record, string, var)
 
 
 test : String -> String -> Node Expression -> Test
@@ -200,6 +200,27 @@ recordPattern2 =
                         [ RecordFieldPattern (node "system") Nothing
                         , RecordFieldPattern (node "username") (Just (string "minibill"))
                         , RecordFieldPattern (node "module") Nothing
+                        ]
+                        { open = False }
+                    )
+                )
+
+
+weirdPatter : Test
+weirdPatter =
+    Test.test "Weird pattern" <|
+        \_ ->
+            Utils.checkPatternParser
+                """{
+                    lib ? import ../..,
+                    modules ? [ ],
+                }"""
+                (node
+                    (RecordPattern
+                        [ RecordFieldPattern (node "lib")
+                            (Just (apply (var "import") [ path [ "..", ".." ] ]))
+                        , RecordFieldPattern (node "modules")
+                            (Just (list []))
                         ]
                         { open = False }
                     )
