@@ -79,8 +79,8 @@ expressionVisitor node context =
                     }
                     range
                     [ Fix.insertAt lrange.start "Char.toCode "
-                    , Fix.insertAt rrange.start ("0x" ++ Hex.toString (Char.toCode char) ++ " {- ")
-                    , Fix.insertAt rrange.end " -}"
+                    , Fix.insertAt rrange.start "{- "
+                    , Fix.insertAt rrange.end (" -} 0x" ++ Hex.toString (Char.toCode char))
                     ]
               ]
             , context
@@ -95,8 +95,8 @@ expressionVisitor node context =
                     }
                     range
                     [ Fix.insertAt lrange.start "Char.toCode "
-                    , Fix.insertAt rrange.start ("0x" ++ Hex.toString (Char.toCode char) ++ " {- ")
-                    , Fix.insertAt rrange.end " -}"
+                    , Fix.insertAt rrange.start "{- "
+                    , Fix.insertAt rrange.end (" -} 0x" ++ Hex.toString (Char.toCode char))
                     ]
               ]
             , context
