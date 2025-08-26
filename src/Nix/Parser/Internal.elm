@@ -885,6 +885,8 @@ stringChar kind =
             |. symbol "\\n"
         , succeed [ '\t' ]
             |. symbol "\\t"
+        , succeed [ '}' ]
+            |. symbol "\\}"
         , case kind of
             InMultilineString ->
                 let
@@ -942,7 +944,7 @@ stringChar kind =
                                     code =
                                         Char.toCode c
                                 in
-                                code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24 && code /= {- '/' -} 0x2F && code /= {- ';' -} 0x3B && code /= {- '(' -} 0x28 && code /= {- ')' -} 0x29 && code /= 0x20
+                                code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= {- '$' -} 0x24 && code /= {- '/' -} 0x2F && code /= {- ';' -} 0x3B && code /= {- '(' -} 0x28 && code /= {- ')' -} 0x29 && code /= 0x20 && code /= {- '}' -} 0x7D
                              {- ' ' -}
                             )
                             (Expecting "String character")
