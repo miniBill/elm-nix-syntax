@@ -85,6 +85,22 @@ expressionVisitor node context =
               ]
             , context
             )
+        Node range (Expression.OperatorApplication "/=" _ (Node lrange (Expression.FunctionOrValue [] _)) (Node rrange (Expression.CharLiteral char))) ->
+            ( [ Rule.errorWithFix
+                    { message = "Comparing to char literals is slow"
+                    , details =
+                        [ "The Elm compiler, in debug mode, doesn't optimize char comparisons, so they go through _Utils_eq and they're slow."
+                        , "Use `==` between numbers instead."
+                        ]
+                    }
+                    range
+                    [ Fix.insertAt lrange.start "Char.toCode "
+                    , Fix.insertAt rrange.start ("0x" ++ Hex.toString (Char.toCode char) ++ " {- ")
+                    , Fix.insertAt rrange.end " -}"
+                    ]
+              ]
+            , context
+            )
 
         _ ->
             ( [], context )
