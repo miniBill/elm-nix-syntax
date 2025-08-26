@@ -398,7 +398,18 @@ number =
         |= oneOf
             [ succeed Just
                 |. symbol "."
-                |= problem (Unimplemented "Float")
+                |. chompWhile Char.isDigit
+                |> getChompedString
+                |> andThen
+                    (\r ->
+                        case String.toFloat ("0" ++ r) of
+                            Just f ->
+                                succeed (Just f)
+
+                            Nothing ->
+                                -- This shouldn't happen
+                                problem (Expecting "A float")
+                    )
             , succeed Nothing
             ]
 
