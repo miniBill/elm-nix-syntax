@@ -20,7 +20,6 @@ import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location, Range)
 import Parser.Advanced as Parser exposing ((|.), (|=), Step(..), Token(..), andThen, backtrackable, chompIf, chompWhile, getChompedString, inContext, lazy, loop, map, oneOf, problem, sequence, succeed)
 import Parser.Advanced.Workaround
-import Parser.Workaround
 import Set exposing (Set)
 
 
