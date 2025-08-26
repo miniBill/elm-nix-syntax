@@ -1,5 +1,11 @@
 module Nix.Parser.Extra exposing (errorToString)
 
+{-|
+
+@docs errorToString
+
+-}
+
 import Json.Encode
 import Nix.Parser
 import Nix.Parser.Context exposing (Context(..))
