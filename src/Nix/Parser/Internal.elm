@@ -943,8 +943,9 @@ stringChar kind =
                                     code =
                                         Char.toCode c
                                 in
-                                code /= {- '"' -} 0x22 && code /= {- '\n' -} 0x0A && code /= 0x24
-                             {- '$' -}
+                                (code /= {- '"' -} 0x22)
+                                    -- && (code /= {- '\n' -} 0x0A)
+                                    && (code /= {- '$' -} 0x24)
                             )
                             (Expecting "String character")
                             |> getChompedString
