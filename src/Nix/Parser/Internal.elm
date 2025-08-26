@@ -859,11 +859,7 @@ some inner =
 stringChar : StringElementKind -> Parser (List Char)
 stringChar kind =
     oneOf
-        [ succeed [ '\\' ]
-            |. symbol "\\\\"
-        , succeed [ '"' ]
-            |. symbol "\\\""
-        , succeed [ '$' ]
+        [ succeed [ '$' ]
             |. backtrackable (symbol "$")
             |. (succeed String.dropLeft
                     |= Parser.getOffset
@@ -877,12 +873,6 @@ stringChar kind =
                                 succeed ()
                         )
                )
-        , succeed [ '\u{000D}' ]
-            |. symbol "\\r"
-        , succeed [ '\n' ]
-            |. symbol "\\n"
-        , succeed [ '\t' ]
-            |. symbol "\\t"
         , succeed [ '}' ]
             |. symbol "\\}"
         , case kind of
@@ -890,8 +880,14 @@ stringChar kind =
                 oneOf
                     [ succeed [ '$' ]
                         |. symbol "''$"
-                    , succeed [ '\'' ]
+                    , succeed [ '\'', '\'' ]
                         |. symbol "'''"
+                    , succeed [ '\n' ]
+                        |. symbol "''\\n"
+                    , succeed [ '\u{000D}' ]
+                        |. symbol "''\\r"
+                    , succeed [ '\t' ]
+                        |. symbol "''\\t"
                     , let
                         notEnding : Parser.Parser c Problem ()
                         notEnding =
@@ -925,8 +921,18 @@ stringChar kind =
 
             InSinglelineString ->
                 oneOf
-                    [ succeed [ '$' ]
+                    [ succeed [ '\\' ]
+                        |. symbol "\\\\"
+                    , succeed [ '"' ]
+                        |. symbol "\\\""
+                    , succeed [ '$' ]
                         |. symbol "\\$"
+                    , succeed [ '\u{000D}' ]
+                        |. symbol "\\r"
+                    , succeed [ '\n' ]
+                        |. symbol "\\n"
+                    , succeed [ '\t' ]
+                        |. symbol "\\t"
                     , succeed String.toList
                         |= (chompIf
                                 (\c ->
