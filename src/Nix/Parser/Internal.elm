@@ -158,10 +158,18 @@ expression_5_concatenation =
 
 expression_4_hasAttribute : Parser (Node Expression)
 expression_4_hasAttribute =
-    oneOf
-        [ expression_3_negation
-        , problem (Unimplemented "x ? y")
-        ]
+    node
+        (succeed (\x f -> f x)
+            |= expression_3_negation
+            |. spaces
+            |= oneOf
+                [ succeed (\r l -> HasAttributeExpr l r)
+                    |. (succeed "?" |. symbol "?")
+                    |. spaces
+                    |= attrPath
+                , succeed Node.value
+                ]
+        )
 
 
 expression_3_negation : Parser (Node Expression)

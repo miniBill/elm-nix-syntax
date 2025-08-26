@@ -36,6 +36,7 @@ type Expression
     | LookupPathExpr (List String)
     | WithExpr (Node Expression) (Node Expression)
     | AssertExpr (Node Expression) (Node Expression)
+    | HasAttributeExpr (Node Expression) (Node AttrPath)
 
 
 type alias Path =

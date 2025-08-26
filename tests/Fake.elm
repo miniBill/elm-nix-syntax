@@ -69,6 +69,9 @@ expression e =
         WithExpr l r ->
             WithExpr (nodeExpression l) (nodeExpression r)
 
+        HasAttributeExpr l r ->
+            HasAttributeExpr (nodeExpression l) (node attrpath r)
+
         AssertExpr l r ->
             AssertExpr (nodeExpression l) (nodeExpression r)
 
