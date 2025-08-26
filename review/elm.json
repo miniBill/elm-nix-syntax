@@ -20,6 +20,7 @@
             "lue-bird/elm-review-no-catch-all-for-specific-remaining-patterns": "1.0.2",
             "miniBill/elm-review-no-broken-elm-parser-functions": "1.0.0",
             "miniBill/elm-review-validate-regexes": "1.0.0",
+            "rtfeldman/elm-hex": "1.0.0",
             "sparksp/elm-review-always": "1.0.6",
             "sparksp/elm-review-imports": "1.0.2",
             "stil4m/elm-syntax": "7.3.9"
@@ -37,7 +38,6 @@
             "elm-explorations/test": "2.2.0",
             "miniBill/elm-fast-dict": "1.2.4",
             "pzp1997/assoc-list": "1.0.0",
-            "rtfeldman/elm-hex": "1.0.0",
             "stil4m/structured-writer": "1.0.3"
         }
     },

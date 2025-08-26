@@ -886,11 +886,16 @@ identifier =
     let
         start : Char -> Bool
         start c =
-            c == '_' || Char.isAlpha c
+            Char.toCode c == 0x5F {- '_' -} || Char.isAlpha c
 
         inner : Char -> Bool
         inner c =
-            c == '_' || c == '\'' || c == '-' || Char.isAlphaNum c
+            let
+                code : Int
+                code =
+                    Char.toCode c
+            in
+            code == 0x5F {- '_' -} || code == 0x27 {- '\'' -} || code == 0x2D {- '-' -} || Char.isAlphaNum c
     in
     Parser.variable
         { start = start
@@ -949,7 +954,16 @@ comment =
 innerSpaces : Parser ()
 innerSpaces =
     chompWhile
-        (\c -> c == ' ' || c == '\t' || c == '\n')
+        (\c ->
+            let
+                code : Int
+                code =
+                    Char.toCode c
+            in
+            (code == 32 {- ' ' -})
+                || (code == 9 {- \t -})
+                || (code == 0x0A {- \n -})
+        )
 
 
 keyword : String -> Parser ()

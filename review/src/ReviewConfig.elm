@@ -15,6 +15,7 @@ import Docs.ReviewAtDocs
 import NoAlways
 import NoBrokenParserFunctions
 import NoCatchAllForSpecificRemainingPatterns
+import NoCharComparisons
 import NoConfusingPrefixOperator
 import NoDebug.Log
 import NoDebug.TodoOrToString
@@ -74,6 +75,7 @@ config =
     , ReviewPipelineStyles.rule pipelineConfig |> Rule.ignoreErrorsForDirectories [ "tests/" ]
     , Simplify.rule Simplify.defaults
     , Validate.Regexes.rule
+    , NoCharComparisons.rule
     ]
 
 
