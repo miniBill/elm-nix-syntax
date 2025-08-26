@@ -70,23 +70,17 @@ assert =
 
 expression_14_logicalImplication : Parser (Node Expression)
 expression_14_logicalImplication =
-    oneOf
-        [ expression_13_logicalDisjunction
-        ]
+    rightAssociativeOperators [ "->" ] expression_13_logicalDisjunction
 
 
 expression_13_logicalDisjunction : Parser (Node Expression)
 expression_13_logicalDisjunction =
-    oneOf
-        [ expression_12_logicalConjunction
-        ]
+    leftAssociativeOperators [ "||" ] expression_12_logicalConjunction
 
 
 expression_12_logicalConjunction : Parser (Node Expression)
 expression_12_logicalConjunction =
-    oneOf
-        [ expression_11_equality
-        ]
+    leftAssociativeOperators [ "&&" ] expression_11_equality
 
 
 expression_11_equality : Parser (Node Expression)
@@ -131,18 +125,7 @@ expression_10_comparison =
 
 expression_9_update : Parser (Node Expression)
 expression_9_update =
-    node
-        (succeed (\x f -> f x)
-            |= expression_8_logicalNegation
-            |. spaces
-            |= oneOf
-                [ succeed (\o r l -> OperatorApplicationExpr l o r)
-                    |= node (succeed "//" |. symbol "//")
-                    |. spaces
-                    |= lazy (\_ -> expression_9_update)
-                , succeed Node.value
-                ]
-        )
+    rightAssociativeOperators [ "//" ] expression_8_logicalNegation
 
 
 expression_8_logicalNegation : Parser (Node Expression)
@@ -165,20 +148,19 @@ expression_7_additionSubtraction =
 
 expression_6_multiplicationDivision : Parser (Node Expression)
 expression_6_multiplicationDivision =
-    oneOf
-        [ expression_5_concatenation
-        ]
+    leftAssociativeOperators [ "*", "/" ] expression_5_concatenation
 
 
 expression_5_concatenation : Parser (Node Expression)
 expression_5_concatenation =
-    rightAssociativeOperator expression_4_hasAttribute "++"
+    rightAssociativeOperators [ "++" ] expression_4_hasAttribute
 
 
 expression_4_hasAttribute : Parser (Node Expression)
 expression_4_hasAttribute =
     oneOf
         [ expression_3_negation
+        , problem (Unimplemented "x ? y")
         ]
 
 
@@ -281,7 +263,19 @@ leftAssociativeOperators ops parseItem =
                     (\op ->
                         node
                             (succeed op
-                                |. symbol op
+                                |. backtrackable (symbol op)
+                                |. (succeed (\offset source -> String.slice offset (offset + 1) source)
+                                        |= Parser.getOffset
+                                        |= Parser.getSource
+                                        |> andThen
+                                            (\sliced ->
+                                                if sliced == "/" then
+                                                    problem (Unexpected "/")
+
+                                                else
+                                                    succeed ()
+                                            )
+                                   )
                             )
                     )
                     ops
@@ -311,17 +305,31 @@ leftAssociativeOperators ops parseItem =
     parseItem |> andThen (\item -> loop item step)
 
 
-rightAssociativeOperator : Parser (Node Expression) -> String -> Parser (Node Expression)
-rightAssociativeOperator leftParser op =
+rightAssociativeOperators : List String -> Parser (Node Expression) -> Parser (Node Expression)
+rightAssociativeOperators ops parseItem =
+    let
+        opParser : Parser (Node String)
+        opParser =
+            oneOf
+                (List.map
+                    (\op ->
+                        node
+                            (succeed op
+                                |. symbol op
+                            )
+                    )
+                    ops
+                )
+    in
     node
         (succeed (\x f -> f x)
-            |= leftParser
+            |= parseItem
             |. spaces
             |= oneOf
                 [ succeed (\o r l -> OperatorApplicationExpr l o r)
-                    |= node (succeed op |. symbol op)
+                    |= opParser
                     |. spaces
-                    |= lazy (\_ -> rightAssociativeOperator leftParser op)
+                    |= lazy (\_ -> rightAssociativeOperators ops parseItem)
                 , succeed Node.value
                 ]
         )
