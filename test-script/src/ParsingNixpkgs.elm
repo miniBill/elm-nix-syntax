@@ -90,7 +90,16 @@ tryParse file =
                         content
                         e
             in
-            BackendTask.fail (FatalError.fromString msg)
+            BackendTask.fail
+                (FatalError.build
+                    { title = "Parsing failed"
+                    , body =
+                        "Parsing failed in "
+                            ++ file
+                            ++ "\n\n"
+                            ++ msg
+                    }
+                )
 
 
 files : String -> BackendTask FatalError (List String)

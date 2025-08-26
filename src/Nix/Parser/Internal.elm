@@ -206,9 +206,10 @@ expression_1_attributeSelection =
     node
         (succeed Tuple.pair
             |= expression_0_atom
+            |. spaces
             |= many
                 (succeed identity
-                    |. symbol "."
+                    |. backtrackable (symbol ".")
                     |= name
                 )
             |> andThen

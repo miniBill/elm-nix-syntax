@@ -1,4 +1,4 @@
-module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, functionApplication, intTest, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
+module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, functionApplication, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
 
 import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
@@ -180,3 +180,19 @@ recordPattern2 =
                         { open = False }
                     )
                 )
+
+
+interpolatedAccess : Test
+interpolatedAccess =
+    test "Interpolated path access"
+        """
+        {}
+        .${l}
+        """
+        (node
+            (AttributeSelectionExpr
+                (record [])
+                [ node (InterpolationName (var "l")) ]
+                Nothing
+            )
+        )
