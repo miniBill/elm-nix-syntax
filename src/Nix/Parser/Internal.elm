@@ -20,6 +20,7 @@ import Nix.Syntax.Node as Node exposing (Node(..))
 import Nix.Syntax.Range exposing (Location, Range)
 import Parser.Advanced as Parser exposing ((|.), (|=), Step(..), Token(..), andThen, backtrackable, chompIf, chompWhile, getChompedString, inContext, lazy, loop, map, oneOf, problem, sequence, succeed)
 import Parser.Advanced.Workaround
+import Parser.Workaround
 import Set exposing (Set)
 
 
@@ -260,7 +261,9 @@ lookupPath =
             , separator = token "/"
             , spaces = succeed ()
             , trailing = Parser.Forbidden
-            , item = identifier
+            , item =
+                Parser.Advanced.Workaround.chompUntilBefore (token ">")
+                    |> getChompedString
             }
 
 
@@ -955,26 +958,29 @@ stringChar kind =
         InPath ->
             succeed String.toList
                 |= (chompIf
-                        (\c ->
-                            let
-                                code : Int
-                                code =
-                                    Char.toCode c
-                            in
-                            (code /= {- '"' -} 0x22)
-                                && (code /= {- '\n' -} 0x0A)
-                                && (code /= {- '$' -} 0x24)
-                                && (code /= {- '/' -} 0x2F)
-                                && (code /= {- ';' -} 0x3B)
-                                && (code /= {- '(' -} 0x28)
-                                && (code /= {- ')' -} 0x29)
-                                && (code /= {- ' ' -} 0x20)
-                                && (code /= {- '}' -} 0x7D)
-                                && (code /= {- ',' -} 0x2C)
-                        )
+                        acceptableInPath
                         (Expecting "String character")
                         |> getChompedString
                    )
+
+
+acceptableInPath : Char -> Bool
+acceptableInPath c =
+    let
+        code : Int
+        code =
+            Char.toCode c
+    in
+    (code /= {- '"' -} 0x22)
+        && (code /= {- '\n' -} 0x0A)
+        && (code /= {- '$' -} 0x24)
+        && (code /= {- '/' -} 0x2F)
+        && (code /= {- ';' -} 0x3B)
+        && (code /= {- '(' -} 0x28)
+        && (code /= {- ')' -} 0x29)
+        && (code /= {- ' ' -} 0x20)
+        && (code /= {- '}' -} 0x7D)
+        && (code /= {- ',' -} 0x2C)
 
 
 many : Parser a -> Parser (List a)
