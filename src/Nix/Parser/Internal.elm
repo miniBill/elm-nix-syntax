@@ -236,7 +236,8 @@ expression_0_atom : Parser (Node Expression)
 expression_0_atom =
     node
         (oneOf
-            [ map StringExpr string
+            [ succeed NullExpr |. keyword "null"
+            , map StringExpr string
             , number
             , map RecordExpr attributeSet
             , map ListExpr list
@@ -245,7 +246,6 @@ expression_0_atom =
             , map PathExpr path
             , map LookupPathExpr lookupPath
             , map BoolExpr bool
-            , succeed NullExpr |. keyword "null"
             ]
         )
 
@@ -859,23 +859,7 @@ some inner =
 stringChar : StringElementKind -> Parser (List Char)
 stringChar kind =
     oneOf
-        [ succeed [ '$' ]
-            |. backtrackable (symbol "$")
-            |. (succeed String.dropLeft
-                    |= Parser.getOffset
-                    |= Parser.getSource
-                    |> andThen
-                        (\cut ->
-                            if String.startsWith "{" cut then
-                                problem (Unexpected "{")
-
-                            else
-                                succeed ()
-                        )
-               )
-        , succeed [ '}' ]
-            |. symbol "\\}"
-        , case kind of
+        [ case kind of
             InMultilineString ->
                 oneOf
                     [ succeed [ '$' ]
@@ -888,6 +872,11 @@ stringChar kind =
                         |. symbol "''\\r"
                     , succeed [ '\t' ]
                         |. symbol "''\\t"
+                    , succeed [ '}' ]
+                        |. symbol "\\}"
+                    , succeed [ '$' ]
+                        |. backtrackable (symbol "$")
+                        |. negativeLookahead "{"
                     , let
                         notEnding : Parser.Parser c Problem ()
                         notEnding =
@@ -933,6 +922,20 @@ stringChar kind =
                         |. symbol "\\n"
                     , succeed [ '\t' ]
                         |. symbol "\\t"
+                    , succeed [ '$' ]
+                        |. backtrackable (symbol "$")
+                        |. (succeed String.dropLeft
+                                |= Parser.getOffset
+                                |= Parser.getSource
+                                |> andThen
+                                    (\cut ->
+                                        if String.startsWith "{" cut then
+                                            problem (Unexpected "{")
+
+                                        else
+                                            succeed ()
+                                    )
+                           )
                     , succeed String.toList
                         |= (chompIf
                                 (\c ->
