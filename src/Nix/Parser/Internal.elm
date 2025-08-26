@@ -79,15 +79,42 @@ expression_12_logicalConjunction =
 
 expression_11_equality : Parser (Node Expression)
 expression_11_equality =
-    oneOf
-        [ expression_10_comparison
-        ]
+    node
+        (succeed (\x f -> f x)
+            |= expression_10_comparison
+            |. spaces
+            |= oneOf
+                [ succeed (\o r l -> OperatorApplicationExpr l o r)
+                    |= oneOf
+                        [ node (succeed "==" |. symbol "==")
+                        , node (succeed "!=" |. symbol "!=")
+                        ]
+                    |. spaces
+                    |= expression_10_comparison
+                , succeed Node.value
+                ]
+        )
 
 
 expression_10_comparison : Parser (Node Expression)
 expression_10_comparison =
-    oneOf
-        [ expression_9_update ]
+    node
+        (succeed (\x f -> f x)
+            |= expression_9_update
+            |. spaces
+            |= oneOf
+                [ succeed (\o r l -> OperatorApplicationExpr l o r)
+                    |= oneOf
+                        [ node (succeed "<=" |. symbol "<=")
+                        , node (succeed "<" |. symbol "<")
+                        , node (succeed ">=" |. symbol ">=")
+                        , node (succeed ">" |. symbol ">")
+                        ]
+                    |. spaces
+                    |= expression_9_update
+                , succeed Node.value
+                ]
+        )
 
 
 expression_9_update : Parser (Node Expression)
