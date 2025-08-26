@@ -39,6 +39,7 @@ expression =
             , node ifThenElse
             , node function
             , node with
+            , node assert
             , expression_14_logicalImplication
             ]
             |. spaces
@@ -49,6 +50,17 @@ with : Parser Expression
 with =
     succeed WithExpr
         |. keyword "with"
+        |. spaces
+        |= lazy (\_ -> expression)
+        |. symbol ";"
+        |. spaces
+        |= lazy (\_ -> expression)
+
+
+assert : Parser Expression
+assert =
+    succeed AssertExpr
+        |. keyword "assert"
         |. spaces
         |= lazy (\_ -> expression)
         |. symbol ";"
@@ -991,7 +1003,8 @@ identifier =
 reserved : Set String
 reserved =
     Set.fromList
-        [ "else"
+        [ "assert"
+        , "else"
         , "false"
         , "if"
         , "in"
