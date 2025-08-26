@@ -1,9 +1,9 @@
-module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringTest)
+module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest)
 
 import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (apply, bool, float, int, minus, node, null, plus, record, string, var)
+import Utils exposing (apply, bool, float, int, minus, node, null, path, plus, record, string, var)
 
 
 test : String -> String -> Node Expression -> Test
@@ -71,6 +71,23 @@ stringInterpolationTest2 =
             (StringExpr
                 [ StringLiteral "1 2 "
                 , StringInterpolation (apply (var "toString") [ int 3 ])
+                ]
+            )
+        )
+
+
+stringInterpolationTest3 : Test
+stringInterpolationTest3 =
+    test "String interpolation #3"
+        "\"${toString ./..}/.git-revision\""
+        (node
+            (StringExpr
+                [ StringInterpolation
+                    (apply
+                        (var "toString")
+                        [ path [ ".", ".." ] ]
+                    )
+                , StringLiteral "/.git-revision"
                 ]
             )
         )

@@ -1,4 +1,4 @@
-module Utils exposing (apply, attribute, bool, checkParser, checkPathParser, checkPatternParser, dot, float, function, int, let_, list, minus, node, null, parens, plus, record, string, update, var)
+module Utils exposing (apply, attribute, bool, checkParser, checkPathParser, checkPatternParser, dot, float, function, int, let_, list, minus, node, null, parens, path, plus, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -104,6 +104,11 @@ key parts =
 string : String -> Node Expression
 string v =
     node (StringExpr [ StringLiteral v ])
+
+
+path : List String -> Node Expression
+path v =
+    node (PathExpr (List.map (\e -> [ StringLiteral e ]) v))
 
 
 int : Int -> Node Expression
