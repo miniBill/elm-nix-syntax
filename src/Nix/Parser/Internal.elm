@@ -255,29 +255,24 @@ lookupPath : Parser (List String)
 lookupPath =
     succeed identity
         |. backtrackable (symbol "<")
-        |= sequence
-            { start = token ""
-            , end = token ">"
-            , separator = token "/"
-            , spaces = succeed ()
-            , trailing = Parser.Forbidden
-            , item =
-                chompWhile
-                    (\c ->
-                        let
-                            code : Int
-                            code =
-                                Char.toCode c
-                        in
-                        (0x61 <= code && code <= 0x7A)
-                            || (0x41 <= code && code <= 0x5A)
-                            || (0x30 <= code && code <= 0x39)
-                            || (code == {- '-' -} 0x2D)
-                            || (code == {- '/' -} 0x2F)
-                            || (code == {- '.' -} 0x2E)
-                    )
-                    |> getChompedString
-            }
+        |= (chompWhile
+                (\c ->
+                    let
+                        code : Int
+                        code =
+                            Char.toCode c
+                    in
+                    (0x61 <= code && code <= 0x7A)
+                        || (0x41 <= code && code <= 0x5A)
+                        || (0x30 <= code && code <= 0x39)
+                        || (code == {- '-' -} 0x2D)
+                        || (code == {- '/' -} 0x2F)
+                        || (code == {- '.' -} 0x2E)
+                )
+                |> getChompedString
+                |> map (String.split "/")
+           )
+        |. symbol ">"
 
 
 leftAssociativeOperators : List String -> Parser (Node Expression) -> Parser (Node Expression)
