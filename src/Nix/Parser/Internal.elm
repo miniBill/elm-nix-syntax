@@ -441,25 +441,18 @@ path =
                 , succeed [ StringLiteral "~" ]
                     |. symbol "~"
                 ]
-            |. symbol "/"
-            |= sequence
-                { start = token ""
-                , end = token ""
-                , separator = token "/"
-                , spaces = succeed ()
-                , item = some (stringElement InPath)
-                , trailing = Parser.Forbidden
-                }
+            |= some
+                (succeed identity
+                    |. backtrackable (symbol "/")
+                    |= some (stringElement InPath)
+                )
         , succeed ((::) [ StringLiteral "" ])
             |. negativeLookahead "//"
-            |= sequence
-                { start = token "/"
-                , end = token ""
-                , separator = token "/"
-                , spaces = succeed ()
-                , item = some (stringElement InPath)
-                , trailing = Parser.Forbidden
-                }
+            |= some
+                (succeed identity
+                    |. backtrackable (symbol "/")
+                    |= some (stringElement InPath)
+                )
         ]
 
 
@@ -540,14 +533,11 @@ letDeclaration =
 
 identifiers : Parser (List (Node String))
 identifiers =
-    sequence
-        { item = node identifier
-        , separator = token ""
-        , spaces = spaces
-        , trailing = Parser.Optional
-        , start = token ""
-        , end = token ""
-        }
+    some
+        (succeed identity
+            |= node identifier
+            |. spaces
+        )
 
 
 function : Parser Expression
