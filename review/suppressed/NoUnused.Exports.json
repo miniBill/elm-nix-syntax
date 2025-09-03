@@ -3,6 +3,7 @@
   "automatically created by": "elm-review suppress",
   "learn more": "elm-review suppress --help",
   "suppressions": [
-    { "count": 1, "filePath": "src/Nix/Syntax/Node.elm" }
+    { "count": 3, "filePath": "src/Parser/Error.elm" },
+    { "count": 1, "filePath": "tests/Utils.elm" }
   ]
 }
