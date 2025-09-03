@@ -46,14 +46,45 @@ script { path } =
     Do.allowFatal profile <| \() ->
     Do.do
         (List.map tryParse list
-            |> List.Extra.greedyGroupsOf 10
-            |> List.map (\g -> g |> BackendTask.combine |> ignoreList)
-            |> BackendTask.sequence
-            |> ignoreList
+            |> safeCombine
         )
     <| \_ ->
     Do.allowFatal profileEnd <| \() ->
     Do.noop
+
+
+safeCombine : List (BackendTask FatalError ()) -> BackendTask FatalError ()
+safeCombine list =
+    if List.length list < 10 then
+        BackendTask.sequence list
+            |> BackendTask.map (\_ -> ())
+
+    else
+        safeCombine
+            (list
+                |> List.Extra.greedyGroupsOf 10
+                |> listSafeMap
+                    (\g ->
+                        g
+                            |> BackendTask.sequence
+                            |> BackendTask.map (\_ -> ())
+                    )
+            )
+
+
+listSafeMap : (a -> b) -> List a -> List b
+listSafeMap f l =
+    let
+        go : List a -> List b -> List b
+        go queue acc =
+            case queue of
+                [] ->
+                    List.reverse acc
+
+                h :: t ->
+                    go t (f h :: acc)
+    in
+    go l []
 
 
 profile : BackendTask { fatal : FatalError, recoverable : Custom.Error } ()
