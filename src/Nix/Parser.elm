@@ -1,5 +1,11 @@
 module Nix.Parser exposing (DeadEnd, Parser, parse)
 
+{-|
+
+@docs DeadEnd, Parser, parse
+
+-}
+
 import Nix.Parser.Context exposing (Context)
 import Nix.Parser.Internal
 import Nix.Parser.Problem exposing (Problem(..))

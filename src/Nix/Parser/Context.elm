@@ -1,5 +1,11 @@
 module Nix.Parser.Context exposing (Context(..))
 
+{-|
+
+@docs Context
+
+-}
+
 
 type Context
     = ParsingExpression

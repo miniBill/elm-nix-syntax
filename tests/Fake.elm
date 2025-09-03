@@ -1,8 +1,7 @@
-module Fake exposing (emptyRange, nodeExpression, nodePattern)
+module Fake exposing (nodeExpression, nodePattern)
 
 import Nix.Syntax.Expression exposing (AttrPath, Attribute(..), Expression(..), LetDeclaration(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
-import Nix.Syntax.Node exposing (Node(..))
-import Nix.Syntax.Range exposing (Location, Range)
+import Nix.Syntax.Node as Node exposing (Node(..))
 
 
 nodeExpression : Node Expression -> Node Expression
@@ -187,18 +186,4 @@ stringElement e =
 
 node : (a -> a) -> Node a -> Node a
 node inner (Node _ x) =
-    Node emptyRange (inner x)
-
-
-emptyRange : Range
-emptyRange =
-    { start = emptyLocation
-    , end = emptyLocation
-    }
-
-
-emptyLocation : Location
-emptyLocation =
-    { row = 0
-    , column = 0
-    }
+    Node.empty (inner x)
