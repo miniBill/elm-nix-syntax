@@ -442,6 +442,8 @@ path =
                     |. symbol ".."
                 , succeed [ StringLiteral "." ]
                     |. symbol "."
+                , succeed [ StringLiteral "~" ]
+                    |. symbol "~"
                 ]
             |. symbol "/"
             |= sequence
