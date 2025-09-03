@@ -1,9 +1,9 @@
-module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest, weirdPatter)
+module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, identifier, idris, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest, weirdPatter)
 
 import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node as Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (apply, bool, float, int, list, minus, null, path, plus, record, string, var)
+import Utils exposing (apply, bool, float, int, let_, list, minus, null, path, plus, record, string, var)
 
 
 test : String -> String -> Node Expression -> Test
@@ -241,3 +241,27 @@ interpolatedAccess =
                 Nothing
             )
         )
+
+
+idris : Test
+idris =
+    test "???"
+        """
+        let
+            idris-with-packages = with-packages;
+            newAttrs = [  ];
+        in
+        null """
+        (let_
+            [ ( "idris-with-packages", var "with-packages" )
+            , ( "newAttrs", list [] )
+            ]
+            null
+        )
+
+
+identifier : Test
+identifier =
+    test "identifier can start with a reserved keyword"
+        "with-packages"
+        (var "with-packages")

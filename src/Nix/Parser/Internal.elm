@@ -49,7 +49,8 @@ expression =
 with : Parser Expression
 with =
     succeed WithExpr
-        |. keyword "with"
+        |. backtrackable (keyword "with")
+        |. negativeLookahead "-"
         |. spaces
         |= lazy (\_ -> expression)
         |. symbol ";"
