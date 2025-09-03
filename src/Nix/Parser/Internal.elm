@@ -273,6 +273,7 @@ lookupPath =
                             || (0x30 <= code && code <= 0x39)
                             || (code == {- '-' -} 0x2D)
                             || (code == {- '/' -} 0x2F)
+                            || (code == {- '.' -} 0x2E)
                     )
                     |> getChompedString
             }
