@@ -984,15 +984,14 @@ acceptableInPath c =
 
 
 many : Parser a -> Parser (List a)
-many item =
-    sequence
-        { start = token ""
-        , end = token ""
-        , spaces = succeed ()
-        , item = item
-        , trailing = Parser.Optional
-        , separator = token ""
-        }
+many parseItem =
+    loop []
+        (\revItems ->
+            oneOf
+                [ parseItem |> map (\i -> Loop (i :: revItems))
+                , map (\_ -> Done (List.reverse revItems)) (succeed ())
+                ]
+        )
 
 
 attributeSet : Parser (List (Node Attribute))
