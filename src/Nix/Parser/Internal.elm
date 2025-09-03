@@ -261,7 +261,18 @@ lookupPath =
             , spaces = succeed ()
             , trailing = Parser.Forbidden
             , item =
-                chompWhile (\c -> Char.isAlphaNum c)
+                chompWhile
+                    (\c ->
+                        let
+                            code : Int
+                            code =
+                                Char.toCode c
+                        in
+                        (0x61 <= code && code <= 0x7A)
+                            || (0x41 <= code && code <= 0x5A)
+                            || (0x30 <= code && code <= 0x39)
+                            || (code == {- '-' -} 0x2D)
+                    )
                     |> getChompedString
             }
 
