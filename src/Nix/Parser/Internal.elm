@@ -874,6 +874,9 @@ stringChar kind =
                     |. symbol "''\\r"
                 , succeed [ '\t' ]
                     |. symbol "''\\t"
+                , succeed String.toList
+                    |. symbol "''\\"
+                    |= getChompedString (chompIf (\_ -> True) (Expecting "any character"))
                 , succeed [ '}' ]
                     |. symbol "\\}"
                 , succeed [ '$' ]
