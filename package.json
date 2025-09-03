@@ -5,6 +5,7 @@
         "elm-test-rs": "^3.0.1-0"
     },
     "scripts": {
-        "test:watch": "elm-test-rs --compiler $(which lamdera) --watch"
+        "test:watch": "elm-test-rs --compiler $(which lamdera) --watch",
+        "review:watch": "elm-review --compiler $(which lamdera) --watch --fix"
     }
 }
