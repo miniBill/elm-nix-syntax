@@ -1,9 +1,9 @@
 module Flake exposing (suite)
 
 import Nix.Syntax.Expression exposing (Attribute(..), Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
-import Nix.Syntax.Node exposing (Node)
+import Nix.Syntax.Node as Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (apply, dot, function, let_, list, node, parens, record, string, update, var)
+import Utils exposing (apply, dot, function, let_, list, parens, record, string, update, var)
 
 
 input : String
@@ -396,18 +396,18 @@ outputs =
 
         withConfig : Node Expression
         withConfig =
-            node
+            Node.empty
                 (FunctionExpr
-                    (node
+                    (Node.empty
                         (RecordPattern
                             [ RecordFieldPattern
-                                (node "system")
+                                (Node.empty "system")
                                 Nothing
                             , RecordFieldPattern
-                                (node "username")
+                                (Node.empty "username")
                                 (Just (string "minibill"))
                             , RecordFieldPattern
-                                (node "module")
+                                (Node.empty "module")
                                 Nothing
                             ]
                             { open = False
@@ -456,7 +456,7 @@ outputs =
         ]
         (record
             [ ( [ "homeConfigurations" ]
-              , node (RecordExpr homeConfigurations)
+              , Node.empty (RecordExpr homeConfigurations)
               )
             , ( [ "nixosConfigurations" ]
               , record nixosConfigurations
@@ -477,10 +477,10 @@ homeConfigurations =
             -> String
             -> Node Attribute
         conf c name =
-            node
+            Node.empty
                 (Attribute
-                    (node
-                        [ node
+                    (Node.empty
+                        [ Node.empty
                             (StringName
                                 [ StringLiteral
                                     (Maybe.withDefault "minibill" c.username ++ "@" ++ name)
@@ -501,7 +501,7 @@ homeConfigurations =
                                     c.username
                                 , Just
                                     ( [ "module" ]
-                                    , node
+                                    , Node.empty
                                         (PathExpr
                                             [ [ StringLiteral "." ]
                                             , [ StringLiteral "machines" ]
@@ -563,7 +563,7 @@ nixosConfigurations =
                       )
                     , ( [ "modules" ]
                       , list
-                            [ node
+                            [ Node.empty
                                 (PathExpr
                                     [ [ StringLiteral "." ]
                                     , [ StringLiteral "machines" ]

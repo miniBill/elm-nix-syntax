@@ -261,7 +261,7 @@ lookupPath =
             , spaces = succeed ()
             , trailing = Parser.Forbidden
             , item =
-                Parser.Advanced.Workaround.chompUntilBefore (token ">")
+                chompWhile (\c -> Char.isAlphaNum c)
                     |> getChompedString
             }
 

@@ -1,9 +1,9 @@
 module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest, weirdPatter)
 
 import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
-import Nix.Syntax.Node exposing (Node)
+import Nix.Syntax.Node as Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (apply, bool, float, int, list, minus, node, null, path, plus, record, string, var)
+import Utils exposing (apply, bool, float, int, list, minus, null, path, plus, record, string, var)
 
 
 test : String -> String -> Node Expression -> Test
@@ -28,7 +28,7 @@ multilineStringTest =
                   string 
             ''
         """
-        (node
+        (Node.empty
             (StringExpr [ StringLiteral "multi\n line\n  string " ])
         )
 
@@ -47,14 +47,14 @@ stringInterpolationTest : Test
 stringInterpolationTest =
     test "String interpolation"
         "\"hello ${ { a = \"world\"; }.a }\""
-        (node
+        (Node.empty
             (StringExpr
                 [ StringLiteral "hello "
                 , StringInterpolation
-                    (node
+                    (Node.empty
                         (AttributeSelectionExpr
                             (record [ ( [ "a" ], string "world" ) ])
-                            [ node (IdentifierName "a") ]
+                            [ Node.empty (IdentifierName "a") ]
                             Nothing
                         )
                     )
@@ -67,7 +67,7 @@ stringInterpolationTest2 : Test
 stringInterpolationTest2 =
     test "String interpolation #2"
         "\"1 2 ${toString 3}\""
-        (node
+        (Node.empty
             (StringExpr
                 [ StringLiteral "1 2 "
                 , StringInterpolation (apply (var "toString") [ int 3 ])
@@ -80,7 +80,7 @@ stringInterpolationTest3 : Test
 stringInterpolationTest3 =
     test "String interpolation #3"
         "\"${toString ./..}/.git-revision\""
-        (node
+        (Node.empty
             (StringExpr
                 [ StringInterpolation
                     (apply
@@ -132,10 +132,10 @@ functionApplication : Test
 functionApplication =
     test "Function application"
         "a b"
-        (node
+        (Node.empty
             (ApplicationExpr
-                (node (VariableExpr "a"))
-                [ node (VariableExpr "b") ]
+                (Node.empty (VariableExpr "a"))
+                [ Node.empty (VariableExpr "b") ]
             )
         )
 
@@ -151,11 +151,11 @@ lambda : Test
 lambda =
     test "Lambda"
         "{ lib }: lib"
-        (node
+        (Node.empty
             (FunctionExpr
-                (node
+                (Node.empty
                     (RecordPattern
-                        [ RecordFieldPattern (node "lib") Nothing ]
+                        [ RecordFieldPattern (Node.empty "lib") Nothing ]
                         { open = False }
                     )
                 )
@@ -182,9 +182,9 @@ recordPattern =
     Test.test "Record pattern" <|
         \_ ->
             Utils.checkPatternParser "{ lib }"
-                (node
+                (Node.empty
                     (RecordPattern
-                        [ RecordFieldPattern (node "lib") Nothing ]
+                        [ RecordFieldPattern (Node.empty "lib") Nothing ]
                         { open = False }
                     )
                 )
@@ -195,11 +195,11 @@ recordPattern2 =
     Test.test "Record pattern 2" <|
         \_ ->
             Utils.checkPatternParser """{ system, username ? "minibill", module, }"""
-                (node
+                (Node.empty
                     (RecordPattern
-                        [ RecordFieldPattern (node "system") Nothing
-                        , RecordFieldPattern (node "username") (Just (string "minibill"))
-                        , RecordFieldPattern (node "module") Nothing
+                        [ RecordFieldPattern (Node.empty "system") Nothing
+                        , RecordFieldPattern (Node.empty "username") (Just (string "minibill"))
+                        , RecordFieldPattern (Node.empty "module") Nothing
                         ]
                         { open = False }
                     )
@@ -215,11 +215,11 @@ weirdPatter =
                     lib ? import ../..,
                     modules ? [ ],
                 }"""
-                (node
+                (Node.empty
                     (RecordPattern
-                        [ RecordFieldPattern (node "lib")
+                        [ RecordFieldPattern (Node.empty "lib")
                             (Just (apply (var "import") [ path [ "..", ".." ] ]))
-                        , RecordFieldPattern (node "modules")
+                        , RecordFieldPattern (Node.empty "modules")
                             (Just (list []))
                         ]
                         { open = False }
@@ -234,10 +234,10 @@ interpolatedAccess =
         {}
         .${l}
         """
-        (node
+        (Node.empty
             (AttributeSelectionExpr
                 (record [])
-                [ node (InterpolationName (var "l")) ]
+                [ Node.empty (InterpolationName (var "l")) ]
                 Nothing
             )
         )

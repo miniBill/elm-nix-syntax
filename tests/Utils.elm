@@ -1,4 +1,4 @@
-module Utils exposing (apply, attribute, bool, checkParser, checkPathParser, checkPatternParser, dot, float, function, int, let_, list, minus, node, null, parens, path, plus, record, string, update, var)
+module Utils exposing (apply, attribute, bool, checkParser, checkPathParser, checkPatternParser, dot, float, function, int, let_, list, minus, null, parens, path, plus, record, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -10,13 +10,13 @@ import Nix.Parser.Extra
 import Nix.Parser.Internal
 import Nix.Parser.Problem
 import Nix.Syntax.Expression exposing (AttrPath, Attribute(..), Expression(..), LetDeclaration(..), Name(..), Path, Pattern(..), StringElement(..))
-import Nix.Syntax.Node exposing (Node(..))
+import Nix.Syntax.Node as Node exposing (Node)
 import Parser.Advanced as Parser exposing ((|.), (|=))
 
 
 record : List ( List String, Node Expression ) -> Node Expression
 record attrs =
-    node
+    Node.empty
         (RecordExpr
             (List.map
                 (\( k, v ) ->
@@ -29,7 +29,7 @@ record attrs =
 
 attribute : List String -> Node Expression -> Node Attribute
 attribute k v =
-    node
+    Node.empty
         (Attribute
             (key k)
             v
@@ -38,47 +38,52 @@ attribute k v =
 
 list : List (Node Expression) -> Node Expression
 list cs =
-    node (ListExpr cs)
+    Node.empty (ListExpr cs)
 
 
 function : String -> Node Expression -> Node Expression
 function v e =
-    node (FunctionExpr (node (VarPattern v)) e)
+    Node.empty (FunctionExpr (Node.empty (VarPattern v)) e)
 
 
 apply : Node Expression -> List (Node Expression) -> Node Expression
 apply v cs =
-    node (ApplicationExpr v cs)
+    Node.empty (ApplicationExpr v cs)
 
 
 var : String -> Node Expression
 var v =
-    node (VariableExpr v)
+    Node.empty (VariableExpr v)
 
 
 plus : Node Expression -> Node Expression -> Node Expression
 plus l r =
-    node (OperatorApplicationExpr l (node "+") r)
+    Node.empty (OperatorApplicationExpr l (Node.empty "+") r)
 
 
 minus : Node Expression -> Node Expression -> Node Expression
 minus l r =
-    node (OperatorApplicationExpr l (node "-") r)
+    Node.empty (OperatorApplicationExpr l (Node.empty "-") r)
 
 
 update : Node Expression -> Node Expression -> Node Expression
 update l r =
-    node (OperatorApplicationExpr l (node "//") r)
+    Node.empty (OperatorApplicationExpr l (Node.empty "//") r)
 
 
 parens : Node Expression -> Node Expression
 parens v =
-    node (ParenthesizedExpr v)
+    Node.empty (ParenthesizedExpr v)
 
 
 dot : Node Expression -> List String -> Node Expression
 dot e k =
-    node (AttributeSelectionExpr e (List.map (\n -> node (IdentifierName n)) k) Nothing)
+    Node.empty
+        (AttributeSelectionExpr
+            e
+            (List.map (\n -> Node.empty (IdentifierName n)) k)
+            Nothing
+        )
 
 
 let_ :
@@ -86,10 +91,10 @@ let_ :
     -> Node Expression
     -> Node Expression
 let_ cs e =
-    node
+    Node.empty
         (LetExpr
             (List.map
-                (\( k, v ) -> node (LetDeclaration (key [ k ]) v))
+                (\( k, v ) -> Node.empty (LetDeclaration (key [ k ]) v))
                 cs
             )
             e
@@ -98,42 +103,37 @@ let_ cs e =
 
 key : List String -> Node AttrPath
 key parts =
-    node (List.map (\part -> node (IdentifierName part)) parts)
+    Node.empty (List.map (\part -> Node.empty (IdentifierName part)) parts)
 
 
 string : String -> Node Expression
 string v =
-    node (StringExpr [ StringLiteral v ])
+    Node.empty (StringExpr [ StringLiteral v ])
 
 
 path : List String -> Node Expression
 path v =
-    node (PathExpr (List.map (\e -> [ StringLiteral e ]) v))
+    Node.empty (PathExpr (List.map (\e -> [ StringLiteral e ]) v))
 
 
 int : Int -> Node Expression
 int v =
-    node (IntExpr v)
+    Node.empty (IntExpr v)
 
 
 float : Float -> Node Expression
 float v =
-    node (FloatExpr v)
+    Node.empty (FloatExpr v)
 
 
 bool : Bool -> Node Expression
 bool v =
-    node (BoolExpr v)
+    Node.empty (BoolExpr v)
 
 
 null : Node Expression
 null =
-    node NullExpr
-
-
-node : a -> Node a
-node x =
-    Node Fake.emptyRange x
+    Node.empty NullExpr
 
 
 checkParser :
