@@ -18,7 +18,6 @@ import Nix.Parser.Context exposing (Context(..))
 import Nix.Parser.Extra
 import Nix.Parser.Problem exposing (Problem(..))
 import Pages.Script as Script exposing (Script)
-import Parser.Error
 
 
 run : Script
