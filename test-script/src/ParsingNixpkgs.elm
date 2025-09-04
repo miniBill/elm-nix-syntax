@@ -46,8 +46,17 @@ script { path } =
     Do.log ("Found " ++ String.fromInt (List.length list) ++ " files") <| \() ->
     Do.allowFatal profile <| \() ->
     Do.do
-        (list
-            |> divideIntoGroups 100
+        (let
+            groups : List (List String)
+            groups =
+                list
+                    |> divideIntoGroups 100
+
+            size : Int
+            size =
+                List.length groups
+         in
+         groups
             |> List.indexedMap
                 (\i g ->
                     Do.do
@@ -56,7 +65,7 @@ script { path } =
                             |> safeCombine
                         )
                     <| \_ ->
-                    Do.log (String.fromInt (i + 1) ++ "% done") <| \_ -> Do.noop
+                    Do.log (String.fromInt ((i + 1) * 100 // size) ++ "% done") <| \_ -> Do.noop
                 )
             |> BackendTask.sequence
         )
