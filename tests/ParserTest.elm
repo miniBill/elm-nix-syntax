@@ -1,8 +1,10 @@
 module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, identifier, idris, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest, weirdPatter)
 
+import Nix.Parser.Internal
 import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
 import Nix.Syntax.Node as Node exposing (Node)
-import Test exposing (Test)
+import Set
+import Test exposing (Test, describe)
 import Utils exposing (apply, bool, float, int, let_, list, minus, null, path, plus, record, string, var)
 
 
@@ -262,6 +264,12 @@ idris =
 
 identifier : Test
 identifier =
-    test "identifier can start with a reserved keyword"
-        "with-packages"
-        (var "with-packages")
+    Nix.Parser.Internal.reserved
+        |> Set.toList
+        |> List.map
+            (\reserved ->
+                test reserved
+                    (reserved ++ "-packages")
+                    (var (reserved ++ "-packages"))
+            )
+        |> describe "identifier can start with a reserved keyword"

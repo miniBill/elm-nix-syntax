@@ -1,4 +1,4 @@
-module Nix.Parser.Internal exposing (DeadEnd, Parser, expression, path, pattern, spaces)
+module Nix.Parser.Internal exposing (DeadEnd, Parser, expression, path, pattern, reserved, spaces)
 
 import List.Extra
 import Maybe.Extra
