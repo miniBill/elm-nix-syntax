@@ -1,4 +1,4 @@
-module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, identifier, idris, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest, weirdPatter)
+module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, identifier, idris, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, notAnInterpolation, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest, weirdPatter)
 
 import Nix.Parser.Internal
 import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
@@ -273,3 +273,10 @@ identifier =
                     (var (reserved ++ "-packages"))
             )
         |> describe "identifier can start with a reserved keyword"
+
+
+notAnInterpolation : Test
+notAnInterpolation =
+    test "not an interpolation"
+        """''"$${A[@]}"''"""
+        (string "\"$${A[@]}\"")

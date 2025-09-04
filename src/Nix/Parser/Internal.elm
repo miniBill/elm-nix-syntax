@@ -863,7 +863,9 @@ stringChar kind =
     case kind of
         InMultilineString ->
             oneOf
-                [ succeed [ '$' ]
+                [ succeed [ '$', '$', '{' ]
+                    |. symbol "$${"
+                , succeed [ '$' ]
                     |. symbol "''$"
                 , succeed [ '\'', '\'' ]
                     |. symbol "'''"
@@ -914,7 +916,9 @@ stringChar kind =
 
         InSinglelineString ->
             oneOf
-                [ succeed [ '\\' ]
+                [ succeed [ '$', '$', '{' ]
+                    |. symbol "$${"
+                , succeed [ '\\' ]
                     |. symbol "\\\\"
                 , succeed [ '"' ]
                     |. symbol "\\\""
