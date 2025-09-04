@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "miniBill/elm-nix-syntax",
-    "summary": "Nix Syntax in Elm: writing Nix in Elm.",
+    "summary": "Nix Syntax in Elm: for parsing and writing Nix in Elm.",
     "license": "BSD-3-Clause",
     "version": "1.0.0",
     "exposed-modules": [
