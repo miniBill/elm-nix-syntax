@@ -533,7 +533,7 @@ letDeclaration =
 
 identifiers : Parser (List (Node String))
 identifiers =
-    some
+    many
         (succeed identity
             |= node identifier
             |. spaces
