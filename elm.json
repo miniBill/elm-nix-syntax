@@ -2,7 +2,7 @@
     "type": "package",
     "name": "miniBill/elm-nix-syntax",
     "summary": "Nix Syntax in Elm: for parsing and writing Nix in Elm.",
-    "license": "BSD-3-Clause",
+    "license": "MIT",
     "version": "1.0.0",
     "exposed-modules": [
         "Nix.Parser",
