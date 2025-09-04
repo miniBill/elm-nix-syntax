@@ -9,6 +9,7 @@ import BackendTask.Glob as Glob
 import Cli.Option
 import Cli.OptionsParser
 import Cli.Program
+import Dict exposing (Dict)
 import FatalError exposing (FatalError)
 import Json.Decode
 import Json.Encode
@@ -45,12 +46,48 @@ script { path } =
     Do.log ("Found " ++ String.fromInt (List.length list) ++ " files") <| \() ->
     Do.allowFatal profile <| \() ->
     Do.do
-        (List.map tryParse list
-            |> safeCombine
+        (list
+            |> divideIntoGroups 100
+            |> List.indexedMap
+                (\i g ->
+                    Do.do
+                        (g
+                            |> List.map tryParse
+                            |> safeCombine
+                        )
+                    <| \_ ->
+                    Do.log (String.fromInt (i + 1) ++ "% done") <| \_ -> Do.noop
+                )
+            |> BackendTask.sequence
         )
     <| \_ ->
     Do.allowFatal profileEnd <| \() ->
     Do.noop
+
+
+divideIntoGroups : Int -> List a -> List (List a)
+divideIntoGroups size list =
+    let
+        upsert : comparable -> b -> Dict comparable (List b) -> Dict comparable (List b)
+        upsert k v d =
+            case Dict.get k d of
+                Nothing ->
+                    Dict.insert k [ v ] d
+
+                Just e ->
+                    Dict.insert k (v :: e) d
+    in
+    list
+        |> List.foldl
+            (\e ( ia, da ) ->
+                ( modBy size (ia + 1)
+                , upsert ia e da
+                )
+            )
+            ( 0, Dict.empty )
+        |> Tuple.second
+        |> Dict.values
+        |> List.map List.reverse
 
 
 safeCombine : List (BackendTask FatalError ()) -> BackendTask FatalError ()
