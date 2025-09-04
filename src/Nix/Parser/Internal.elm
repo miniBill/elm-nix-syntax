@@ -49,8 +49,7 @@ expression =
 with : Parser Expression
 with =
     succeed WithExpr
-        |. backtrackable (keyword "with")
-        |. negativeLookahead "-"
+        |. keyword "with"
         |. spaces
         |= lazy (\_ -> expression)
         |. symbol ";"
@@ -1178,7 +1177,9 @@ innerSpaces =
 
 keyword : String -> Parser ()
 keyword v =
-    Parser.keyword (token v)
+    succeed ()
+        |. backtrackable (Parser.keyword (token v))
+        |. negativeLookahead "-"
 
 
 symbol : String -> Parser ()
