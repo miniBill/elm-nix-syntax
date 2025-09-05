@@ -1,4 +1,4 @@
-module Utils exposing (apply, attribute, bool, checkParser, checkPathParser, checkPatternParser, dot, float, function, int, let_, list, minus, null, parens, path, plus, record, string, update, var)
+module Utils exposing (apply, attrSet, attribute, bool, checkParser, checkPathParser, checkPatternParser, dot, float, function, int, let_, list, minus, null, parens, path, plus, string, update, var)
 
 import Ansi.Color
 import Diff
@@ -14,8 +14,8 @@ import Nix.Syntax.Node as Node exposing (Node)
 import Parser.Advanced as Parser exposing ((|.), (|=))
 
 
-record : List ( List String, Node Expression ) -> Node Expression
-record attrs =
+attrSet : List ( List String, Node Expression ) -> Node Expression
+attrSet attrs =
     Node.empty
         (AttrSetExpr
             (List.map

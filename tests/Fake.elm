@@ -1,6 +1,6 @@
 module Fake exposing (nodeExpression, nodePattern)
 
-import Nix.Syntax.Expression exposing (AttrPath, Attribute(..), Expression(..), LetDeclaration(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
+import Nix.Syntax.Expression exposing (AttrPath, Attribute(..), AttributePattern(..), Expression(..), LetDeclaration(..), Name(..), Pattern(..), StringElement(..))
 import Nix.Syntax.Node as Node exposing (Node(..))
 
 
@@ -110,8 +110,8 @@ letDeclaration decl =
 pattern : Pattern -> Pattern
 pattern p =
     case p of
-        RecordPattern cs open ->
-            RecordPattern (List.map recordFieldPattern cs) open
+        AttrSetPattern cs open ->
+            AttrSetPattern (List.map attributePattern cs) open
 
         AllPattern ->
             p
@@ -129,9 +129,9 @@ pattern p =
             ReverseAtPattern (node identityString n) (nodePattern c)
 
 
-recordFieldPattern : RecordFieldPattern -> RecordFieldPattern
-recordFieldPattern (RecordFieldPattern k default) =
-    RecordFieldPattern
+attributePattern : AttributePattern -> AttributePattern
+attributePattern (AttributePattern k default) =
+    AttributePattern
         (node identityString k)
         (Maybe.map nodeExpression default)
 

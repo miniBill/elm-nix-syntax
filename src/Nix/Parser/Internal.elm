@@ -8,12 +8,12 @@ import Nix.Syntax.Expression
     exposing
         ( AttrPath
         , Attribute(..)
+        , AttributePattern(..)
         , Expression(..)
         , LetDeclaration(..)
         , Name(..)
         , Path
         , Pattern(..)
-        , RecordFieldPattern(..)
         , StringElement(..)
         )
 import Nix.Syntax.Node as Node exposing (Node(..))
@@ -558,7 +558,7 @@ pattern =
         atom =
             [ succeed
                 (\items ->
-                    RecordPattern
+                    AttrSetPattern
                         (List.filterMap identity items)
                         { open = List.member Nothing items }
                 )
@@ -567,7 +567,7 @@ pattern =
                     , item =
                         oneOf
                             [ succeed Just
-                                |= recordFieldPattern
+                                |= attributePattern
                             , succeed Nothing
                                 |. symbol "..."
                             ]
@@ -632,9 +632,9 @@ pattern =
         |. spaces
 
 
-recordFieldPattern : Parser RecordFieldPattern
-recordFieldPattern =
-    succeed RecordFieldPattern
+attributePattern : Parser AttributePattern
+attributePattern =
+    succeed AttributePattern
         |= node identifier
         |. spaces
         |= oneOf
@@ -654,7 +654,7 @@ string =
             |. symbol "\""
             |= inContext ParsingString
                 (succeed identity
-                    |= many (stringElement InSinglelineString)
+                    |= many (stringElement InString)
                     |. symbol "\""
                 )
         , succeed identity
@@ -674,7 +674,7 @@ indentedString =
                 , end = token "''"
                 , trailing = Parser.Optional
                 , separator = Token "\n" (Expecting "\\n")
-                , item = many (stringElement InMultilineString)
+                , item = many (stringElement InIndentedString)
                 , spaces = succeed ()
                 }
             )
@@ -831,8 +831,8 @@ location =
 
 
 type StringElementKind
-    = InSinglelineString
-    | InMultilineString
+    = InString
+    | InIndentedString
     | InPath
 
 
@@ -861,7 +861,7 @@ some inner =
 stringChar : StringElementKind -> Parser (List Char)
 stringChar kind =
     case kind of
-        InMultilineString ->
+        InIndentedString ->
             oneOf
                 [ succeed [ '$', '$', '{' ]
                     |. symbol "$${"
@@ -914,7 +914,7 @@ stringChar kind =
                        )
                 ]
 
-        InSinglelineString ->
+        InString ->
             oneOf
                 [ succeed [ '$', '$', '{' ]
                     |. symbol "$${"

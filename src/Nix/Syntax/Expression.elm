@@ -1,8 +1,8 @@
-module Nix.Syntax.Expression exposing (AttrPath, Attribute(..), Expression(..), LetDeclaration(..), Name(..), Path, Pattern(..), RecordFieldPattern(..), StringElement(..))
+module Nix.Syntax.Expression exposing (AttrPath, Attribute(..), Expression(..), LetDeclaration(..), Name(..), Path, Pattern(..), AttributePattern(..), StringElement(..))
 
 {-|
 
-@docs AttrPath, Attribute, Expression, LetDeclaration, Name, Path, Pattern, RecordFieldPattern, StringElement
+@docs AttrPath, Attribute, Expression, LetDeclaration, Name, Path, Pattern, AttributePattern, StringElement
 
 -}
 
@@ -66,12 +66,12 @@ type Name
 
 type Pattern
     = AllPattern
-    | RecordPattern (List RecordFieldPattern) { open : Bool }
+    | AttrSetPattern (List AttributePattern) { open : Bool }
     | VarPattern String
     | AtPattern (Node Pattern) (Node String)
     | ReverseAtPattern (Node String) (Node Pattern)
     | ParenthesizedPattern (Node Pattern)
 
 
-type RecordFieldPattern
-    = RecordFieldPattern (Node String) (Maybe (Node Expression))
+type AttributePattern
+    = AttributePattern (Node String) (Maybe (Node Expression))

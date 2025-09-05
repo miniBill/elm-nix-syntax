@@ -1,11 +1,11 @@
-module ParserTest exposing (addition, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, identifier, idris, intTest, interpolatedAccess, lambda, longPathTest, multilineStringTest, notAnInterpolation, nullTest, recordPattern, recordPattern2, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest, weirdPatter)
+module ParserTest exposing (addition, attributePattern, attributePattern2, booleansFalseTest, booleansTrueTest, commentTest, floatTest, functionApplication, identifier, idris, indentedStringTest, intTest, interpolatedAccess, lambda, longPathTest, notAnInterpolation, nullTest, stringInterpolationTest, stringInterpolationTest2, stringInterpolationTest3, stringTest, weirdPatter)
 
 import Nix.Parser.Internal
-import Nix.Syntax.Expression exposing (Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
+import Nix.Syntax.Expression exposing (AttributePattern(..), Expression(..), Name(..), Pattern(..), StringElement(..))
 import Nix.Syntax.Node as Node exposing (Node)
 import Set
 import Test exposing (Test, describe)
-import Utils exposing (apply, bool, float, int, let_, list, minus, null, path, plus, record, string, var)
+import Utils exposing (apply, attrSet, bool, float, int, let_, list, minus, null, path, plus, string, var)
 
 
 test : String -> String -> Node Expression -> Test
@@ -20,8 +20,8 @@ stringTest =
     test "String" "\"hello world\"" (string "hello world")
 
 
-multilineStringTest : Test
-multilineStringTest =
+indentedStringTest : Test
+indentedStringTest =
     test "Indented string"
         """
             ''
@@ -55,7 +55,7 @@ stringInterpolationTest =
                 , StringInterpolation
                     (Node.empty
                         (DotExpr
-                            (record [ ( [ "a" ], string "world" ) ])
+                            (attrSet [ ( [ "a" ], string "world" ) ])
                             [ Node.empty (IdentifierName "a") ]
                             Nothing
                         )
@@ -156,8 +156,8 @@ lambda =
         (Node.empty
             (FunctionExpr
                 (Node.empty
-                    (RecordPattern
-                        [ RecordFieldPattern (Node.empty "lib") Nothing ]
+                    (AttrSetPattern
+                        [ AttributePattern (Node.empty "lib") Nothing ]
                         { open = False }
                     )
                 )
@@ -179,29 +179,29 @@ longPathTest =
                 ]
 
 
-recordPattern : Test
-recordPattern =
-    Test.test "Record pattern" <|
+attributePattern : Test
+attributePattern =
+    Test.test "Attribute pattern" <|
         \_ ->
             Utils.checkPatternParser "{ lib }"
                 (Node.empty
-                    (RecordPattern
-                        [ RecordFieldPattern (Node.empty "lib") Nothing ]
+                    (AttrSetPattern
+                        [ AttributePattern (Node.empty "lib") Nothing ]
                         { open = False }
                     )
                 )
 
 
-recordPattern2 : Test
-recordPattern2 =
-    Test.test "Record pattern 2" <|
+attributePattern2 : Test
+attributePattern2 =
+    Test.test "Attribute pattern 2" <|
         \_ ->
             Utils.checkPatternParser """{ system, username ? "minibill", module, }"""
                 (Node.empty
-                    (RecordPattern
-                        [ RecordFieldPattern (Node.empty "system") Nothing
-                        , RecordFieldPattern (Node.empty "username") (Just (string "minibill"))
-                        , RecordFieldPattern (Node.empty "module") Nothing
+                    (AttrSetPattern
+                        [ AttributePattern (Node.empty "system") Nothing
+                        , AttributePattern (Node.empty "username") (Just (string "minibill"))
+                        , AttributePattern (Node.empty "module") Nothing
                         ]
                         { open = False }
                     )
@@ -218,10 +218,10 @@ weirdPatter =
                     modules ? [ ],
                 }"""
                 (Node.empty
-                    (RecordPattern
-                        [ RecordFieldPattern (Node.empty "lib")
+                    (AttrSetPattern
+                        [ AttributePattern (Node.empty "lib")
                             (Just (apply (var "import") [ path [ "..", ".." ] ]))
-                        , RecordFieldPattern (Node.empty "modules")
+                        , AttributePattern (Node.empty "modules")
                             (Just (list []))
                         ]
                         { open = False }
@@ -238,7 +238,7 @@ interpolatedAccess =
         """
         (Node.empty
             (DotExpr
-                (record [])
+                (attrSet [])
                 [ Node.empty (InterpolationName (var "l")) ]
                 Nothing
             )

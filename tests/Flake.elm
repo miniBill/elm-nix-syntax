@@ -1,9 +1,9 @@
 module Flake exposing (suite)
 
-import Nix.Syntax.Expression exposing (Attribute(..), Expression(..), Name(..), Pattern(..), RecordFieldPattern(..), StringElement(..))
+import Nix.Syntax.Expression exposing (Attribute(..), AttributePattern(..), Expression(..), Name(..), Pattern(..), StringElement(..))
 import Nix.Syntax.Node as Node exposing (Node)
 import Test exposing (Test)
-import Utils exposing (apply, dot, function, let_, list, parens, record, string, update, var)
+import Utils exposing (apply, attrSet, dot, function, let_, list, parens, string, update, var)
 
 
 input : String
@@ -223,7 +223,7 @@ input =
 
 value : Node Expression
 value =
-    record
+    attrSet
         [ ( [ "description" ]
           , string "Home Manager and NixOS configurations"
           )
@@ -234,7 +234,7 @@ value =
 
 inputs : Node Expression
 inputs =
-    record
+    attrSet
         [ ( [ "nixpkgs", "url" ]
           , string "github:NixOS/nixpkgs/nixos-25.05"
           )
@@ -245,7 +245,7 @@ inputs =
           , string "github:nix-systems/default"
           )
         , ( [ "secretdemoclub" ]
-          , record
+          , attrSet
                 [ ( [ "url" ]
                   , string "github:miniBill/secretdemoclub?dir=server"
                   )
@@ -261,7 +261,7 @@ inputs =
           , string "github:NixOS/nixpkgs?rev=4cba8b53da471aea2ab2b0c1f30a81e7c451f4b6"
           )
         , ( [ "lix-module" ]
-          , record
+          , attrSet
                 [ ( [ "url" ]
                   , string "https://git.lix.systems/lix-project/nixos-module/archive/2.93.1.tar.gz"
                   )
@@ -274,7 +274,7 @@ inputs =
                 ]
           )
         , ( [ "musnix" ]
-          , record
+          , attrSet
                 [ ( [ "url" ]
                   , string "github:musnix/musnix"
                   )
@@ -284,7 +284,7 @@ inputs =
                 ]
           )
         , ( [ "agenix" ]
-          , record
+          , attrSet
                 [ ( [ "url" ]
                   , string "github:ryantm/agenix"
                   )
@@ -300,7 +300,7 @@ inputs =
                 ]
           )
         , ( [ "home-manager" ]
-          , record
+          , attrSet
                 [ ( [ "url" ]
                   , string "github:nix-community/home-manager/release-25.05"
                   )
@@ -310,7 +310,7 @@ inputs =
                 ]
           )
         , ( [ "nix-index-database" ]
-          , record
+          , attrSet
                 [ ( [ "url" ]
                   , string "github:nix-community/nix-index-database"
                   )
@@ -320,7 +320,7 @@ inputs =
                 ]
           )
         , ( [ "flake-utils" ]
-          , record
+          , attrSet
                 [ ( [ "url" ]
                   , string "github:numtide/flake-utils"
                   )
@@ -355,12 +355,12 @@ outputs =
                     [ dot
                         (var "inputs")
                         [ "nixpkgs" ]
-                    , record
+                    , attrSet
                         [ ( [ "system" ]
                           , var "system"
                           )
                         , ( [ "config" ]
-                          , record
+                          , attrSet
                                 [ ( [ "allowUnfreePredicate" ]
                                   , function "pkg"
                                         (apply
@@ -399,14 +399,14 @@ outputs =
             Node.empty
                 (FunctionExpr
                     (Node.empty
-                        (RecordPattern
-                            [ RecordFieldPattern
+                        (AttrSetPattern
+                            [ AttributePattern
                                 (Node.empty "system")
                                 Nothing
-                            , RecordFieldPattern
+                            , AttributePattern
                                 (Node.empty "username")
                                 (Just (string "minibill"))
-                            , RecordFieldPattern
+                            , AttributePattern
                                 (Node.empty "module")
                                 Nothing
                             ]
@@ -422,7 +422,7 @@ outputs =
                             , "homeManagerConfiguration"
                             ]
                         )
-                        [ record
+                        [ attrSet
                             [ ( [ "pkgs" ]
                               , apply
                                     (var "pkgs")
@@ -437,7 +437,7 @@ outputs =
                             , ( [ "extraSpecialArgs" ]
                               , update
                                     (var "inputs")
-                                    (record
+                                    (attrSet
                                         [ ( [ "username" ]
                                           , var "username"
                                           )
@@ -454,12 +454,12 @@ outputs =
         , ( "pkgs", pkgs )
         , ( "withConfig", withConfig )
         ]
-        (record
+        (attrSet
             [ ( [ "homeConfigurations" ]
               , Node.empty (AttrSetExpr homeConfigurations)
               )
             , ( [ "nixosConfigurations" ]
-              , record nixosConfigurations
+              , attrSet nixosConfigurations
               )
             ]
         )
@@ -490,7 +490,7 @@ homeConfigurations =
                     )
                     (apply
                         (var "withConfig")
-                        [ record
+                        [ attrSet
                             (List.filterMap identity
                                 [ Just
                                     ( [ "system" ]
@@ -554,7 +554,7 @@ nixosConfigurations =
                     , "nixosSystem"
                     ]
                 )
-                [ record
+                [ attrSet
                     [ ( [ "system" ]
                       , string (arch ++ "-linux")
                       )
