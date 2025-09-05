@@ -15,20 +15,14 @@ type Expression
     | OperatorApplicationExpr (Node Expression) (Node String) (Node Expression)
     | VariableExpr String
     | IfThenElseExpr (Node Expression) (Node Expression) (Node Expression)
-      -- | PrefixOperator String
     | BoolExpr Bool
     | IntExpr Int
-      -- | Hex Int
     | FloatExpr Float
     | NegationExpr (Node Expression)
     | StringExpr (List StringElement)
-      -- | CharLiteral Char
-      -- | TupledExpression (List (Node Expression))
     | ParenthesizedExpr (Node Expression)
     | LetExpr (List (Node LetDeclaration)) (Node Expression)
-      -- | CaseExpression CaseBlock
     | AttributeSelectionExpr (Node Expression) (List (Node Name)) (Maybe (Node Expression))
-      -- | RecordAccessFunction String
     | FunctionExpr (Node Pattern) (Node Expression)
     | RecordExpr (List (Node Attribute))
     | ListExpr (List (Node Expression))
@@ -72,15 +66,7 @@ type Name
 
 type Pattern
     = AllPattern
-      -- | UnitPattern
-      -- | CharPattern Char
-      -- | StringPattern String
-      -- | IntPattern Int
-      -- | HexPattern Int
-      -- | FloatPattern Float
     | RecordPattern (List RecordFieldPattern) { open : Bool }
-      -- | UnConsPattern (Node Pattern) (Node Pattern)
-      -- | ListPattern (List (Node Pattern))
     | VarPattern String
     | AtPattern (Node Pattern) (Node String)
     | ReverseAtPattern (Node String) (Node Pattern)
