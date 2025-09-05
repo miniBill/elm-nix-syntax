@@ -14,7 +14,7 @@ type Expression
     | ApplicationExpr (Node Expression) (List (Node Expression))
     | OperatorApplicationExpr (Node Expression) (Node String) (Node Expression)
     | VariableExpr String
-    | IfThenElseExpr (Node Expression) (Node Expression) (Node Expression)
+    | IfExpr (Node Expression) (Node Expression) (Node Expression)
     | BoolExpr Bool
     | IntExpr Int
     | FloatExpr Float
@@ -22,9 +22,9 @@ type Expression
     | StringExpr (List StringElement)
     | ParenthesizedExpr (Node Expression)
     | LetExpr (List (Node LetDeclaration)) (Node Expression)
-    | AttributeSelectionExpr (Node Expression) (List (Node Name)) (Maybe (Node Expression))
+    | DotExpr (Node Expression) (List (Node Name)) (Maybe (Node Expression))
     | FunctionExpr (Node Pattern) (Node Expression)
-    | RecordExpr (List (Node Attribute))
+    | AttrSetExpr (List (Node Attribute))
     | ListExpr (List (Node Expression))
     | PathExpr Path
     | LookupPathExpr (List String)
@@ -40,13 +40,13 @@ type alias Path =
 type LetDeclaration
     = LetDeclaration (Node AttrPath) (Node Expression)
     | LetInheritVariables (List (Node String))
-    | LetInheritFromSet (Node Expression) (List (Node String))
+    | LetInheritFromAttrSet (Node Expression) (List (Node String))
 
 
 type Attribute
     = Attribute (Node AttrPath) (Node Expression)
     | AttributeInheritVariables (List (Node String))
-    | AttributeInheritFromSet (Node Expression) (List (Node String))
+    | AttributeInheritFromAttrSet (Node Expression) (List (Node String))
 
 
 type alias AttrPath =

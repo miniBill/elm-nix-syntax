@@ -218,7 +218,7 @@ expression_1_attributeSelection =
                         succeed (Node.value atom)
 
                     else
-                        succeed (AttributeSelectionExpr atom attrs)
+                        succeed (DotExpr atom attrs)
                             |. spaces
                             |= oneOf
                                 [ succeed Just
@@ -240,7 +240,7 @@ expression_0_atom =
             , map BoolExpr bool
             , map StringExpr string
             , number
-            , map RecordExpr attributeSet
+            , map AttrSetExpr attrSet
             , map ListExpr list
             , map ParenthesizedExpr parenthesizedExpression
             , map VariableExpr identifier
@@ -485,7 +485,7 @@ ifThenElse =
         |. keyword "if"
         |. spaces
         |= inContext ParsingIfThenElse
-            (succeed IfThenElseExpr
+            (succeed IfExpr
                 |= lazy (\_ -> expression)
                 |. keyword "then"
                 |. spaces
@@ -512,7 +512,7 @@ letDeclaration =
                 |. keyword "inherit"
                 |. spaces
                 |= oneOf
-                    [ succeed LetInheritFromSet
+                    [ succeed LetInheritFromAttrSet
                         |. symbol "("
                         |. spaces
                         |= lazy (\_ -> expression)
@@ -1000,8 +1000,8 @@ many parseItem =
         )
 
 
-attributeSet : Parser (List (Node Attribute))
-attributeSet =
+attrSet : Parser (List (Node Attribute))
+attrSet =
     succeed identity
         |. symbol "{"
         |= inContext ParsingAttrset
@@ -1032,7 +1032,7 @@ attribute =
                 |. keyword "inherit"
                 |. spaces
                 |= oneOf
-                    [ succeed AttributeInheritFromSet
+                    [ succeed AttributeInheritFromAttrSet
                         |. symbol "("
                         |. spaces
                         |= lazy (\_ -> expression)

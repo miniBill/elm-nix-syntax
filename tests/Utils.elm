@@ -17,7 +17,7 @@ import Parser.Advanced as Parser exposing ((|.), (|=))
 record : List ( List String, Node Expression ) -> Node Expression
 record attrs =
     Node.empty
-        (RecordExpr
+        (AttrSetExpr
             (List.map
                 (\( k, v ) ->
                     attribute k v
@@ -79,7 +79,7 @@ parens v =
 dot : Node Expression -> List String -> Node Expression
 dot e k =
     Node.empty
-        (AttributeSelectionExpr
+        (DotExpr
             e
             (List.map (\n -> Node.empty (IdentifierName n)) k)
             Nothing

@@ -456,7 +456,7 @@ outputs =
         ]
         (record
             [ ( [ "homeConfigurations" ]
-              , Node.empty (RecordExpr homeConfigurations)
+              , Node.empty (AttrSetExpr homeConfigurations)
               )
             , ( [ "nixosConfigurations" ]
               , record nixosConfigurations

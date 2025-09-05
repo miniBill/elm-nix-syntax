@@ -54,7 +54,7 @@ stringInterpolationTest =
                 [ StringLiteral "hello "
                 , StringInterpolation
                     (Node.empty
-                        (AttributeSelectionExpr
+                        (DotExpr
                             (record [ ( [ "a" ], string "world" ) ])
                             [ Node.empty (IdentifierName "a") ]
                             Nothing
@@ -237,7 +237,7 @@ interpolatedAccess =
         .${l}
         """
         (Node.empty
-            (AttributeSelectionExpr
+            (DotExpr
                 (record [])
                 [ Node.empty (InterpolationName (var "l")) ]
                 Nothing

@@ -32,8 +32,8 @@ expression e =
         LetExpr ds c ->
             LetExpr (List.map (node letDeclaration) ds) (nodeExpression c)
 
-        AttributeSelectionExpr v a d ->
-            AttributeSelectionExpr
+        DotExpr v a d ->
+            DotExpr
                 (nodeExpression v)
                 (List.map (node name) a)
                 (Maybe.map nodeExpression d)
@@ -41,8 +41,8 @@ expression e =
         FunctionExpr p c ->
             FunctionExpr (nodePattern p) (nodeExpression c)
 
-        RecordExpr attrs ->
-            RecordExpr (List.map (node attribute) attrs)
+        AttrSetExpr attrs ->
+            AttrSetExpr (List.map (node attribute) attrs)
 
         ListExpr cs ->
             ListExpr (List.map nodeExpression cs)
@@ -80,8 +80,8 @@ expression e =
         LookupPathExpr c ->
             LookupPathExpr (List.map identityString c)
 
-        IfThenElseExpr c t f ->
-            IfThenElseExpr (nodeExpression c) (nodeExpression t) (nodeExpression f)
+        IfExpr c t f ->
+            IfExpr (nodeExpression c) (nodeExpression t) (nodeExpression f)
 
 
 identityBool : Bool -> Bool
@@ -103,8 +103,8 @@ letDeclaration decl =
         LetInheritVariables vs ->
             LetInheritVariables (List.map (node identityString) vs)
 
-        LetInheritFromSet s vs ->
-            LetInheritFromSet (nodeExpression s) (List.map (node identityString) vs)
+        LetInheritFromAttrSet s vs ->
+            LetInheritFromAttrSet (nodeExpression s) (List.map (node identityString) vs)
 
 
 pattern : Pattern -> Pattern
@@ -152,8 +152,8 @@ attribute attr =
         AttributeInheritVariables vs ->
             AttributeInheritVariables (List.map (node identityString) vs)
 
-        AttributeInheritFromSet s vs ->
-            AttributeInheritFromSet (nodeExpression s) (List.map (node identityString) vs)
+        AttributeInheritFromAttrSet s vs ->
+            AttributeInheritFromAttrSet (nodeExpression s) (List.map (node identityString) vs)
 
 
 attrpath : AttrPath -> AttrPath
